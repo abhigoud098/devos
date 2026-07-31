@@ -1,4 +1,8 @@
-export type LearningStatus = "not-started" | "in-progress" | "completed" | "revising";
+export type LearningStatus =
+  | "not-started"
+  | "in-progress"
+  | "completed"
+  | "revising";
 
 export type Confidence = 1 | 2 | 3 | 4 | 5;
 
@@ -11,43 +15,76 @@ export interface Resource {
   type: "youtube" | "course" | "docs" | "article" | "book" | "github";
 }
 
-/** Offsets (in days) used to auto-generate a spaced-repetition schedule
- *  once a topic is marked completed. */
-export const REVISION_OFFSETS_DAYS = [1, 2, 5, 7, 10, 15, 21, 30, 60, 90] as const;
+/**
+ * Default spaced repetition intervals.
+ */
+export const REVISION_OFFSETS_DAYS = [
+  1, 2, 5, 7, 10, 15, 21, 30, 60, 90,
+] as const;
 
+/**
+ * Single revision item.
+ */
 export interface RevisionEntry {
-  /** ISO date string, e.g. 2026-08-05 */
+  /** ISO date string, example: 2026-08-05 */
   date: string;
-  offsetDays: (typeof REVISION_OFFSETS_DAYS)[number];
+
+  /**
+   * Number of days after completion.
+   * Kept as number because custom revision intervals are allowed.
+   */
+  offsetDays: number;
+
   done: boolean;
+
   doneAt?: string;
 }
 
 export interface LearningTopic {
   id: string;
-  technology: string; // e.g. "React"
-  topic: string; // e.g. "Hooks"
-  subtopic?: string; // e.g. "useEffect cleanup"
+
+  technology: string;
+  topic: string;
+
+  subtopic?: string;
+
   status: LearningStatus;
+
   confidence: Confidence;
+
   difficulty: Difficulty;
+
   hoursStudied: number;
-  lastStudied?: string; // ISO date
+
+  lastStudied?: string;
+
   notes?: string;
+
   resources: Resource[];
+
   interviewQuestions: string[];
+
   revisionSchedule: RevisionEntry[];
+
   createdAt: string;
+
   updatedAt: string;
 }
 
 export interface LearningFormValues {
   technology: string;
+
   topic: string;
+
   subtopic?: string;
+
   status: LearningStatus;
+
   confidence: Confidence;
+
   difficulty: Difficulty;
+
   hoursStudied: number;
+
   notes?: string;
 }

@@ -1,110 +1,109 @@
 "use client";
 
-import { useMemo } from "react";
+import { Trash2, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useLiveQuery } from "dexie-react-hooks";
-import { format, parseISO } from "date-fns";
-import { Pencil, Trash2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { deleteTopic } from "@/lib/learning-repo";
-import { nextPendingRevision } from "@/lib/revision";
-import { useLearningStore } from "@/store/learning-store";
-import { ConfidenceMeter } from "./confidence-meter";
-import { StatusBadge } from "./status-badge";
-import { LearningEmptyState } from "./empty-state";
-import { LearningSkeleton } from "./skeleton";
-import { formatHours } from "@/lib/utils";
 
-export function LearningTable() {
-  const { search, statusFilter, technologyFilter, openCreateDialog, openEditDialog } =
-    useLearningStore();
+type Props = {
+  onAddRevision: (topic: {
+    id: string;
+    technology: string;
+    topic: string;
+  }) => void;
+};
 
-  const topics = useLiveQuery(() => db.learningTopics.orderBy("updatedAt").reverse().toArray(), []);
+export function LearningTable({ onAddRevision }: Props) {
+  const topics = useLiveQuery(() => db.learningTopics.toArray(), []);
 
-  const filtered = useMemo(() => {
-    if (!topics) return undefined;
-    return topics.filter((t) => {
-      if (statusFilter !== "all" && t.status !== statusFilter) return false;
-      if (technologyFilter !== "all" && t.technology !== technologyFilter) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        const hay = `${t.technology} ${t.topic} ${t.subtopic ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [topics, search, statusFilter, technologyFilter]);
-
-  if (filtered === undefined) return <LearningSkeleton />;
-  if (topics && topics.length === 0) return <LearningEmptyState onCreate={openCreateDialog} />;
-  if (filtered.length === 0) {
+  if (!topics) {
     return (
-      <p className="text-center text-[13px] text-ink-muted py-16">
-        No topics match your filters.
-      </p>
+      <div className="py-10 text-center text-muted-foreground">
+        Loading topics...
+      </div>
+    );
+  }
+
+  if (topics.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed p-10 text-center">
+        <p className="text-muted-foreground">No learning topics added yet.</p>
+      </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-base-border">
-      <table className="w-full text-left text-[13px]">
+    <div className="overflow-x-auto">
+      <table className="w-full">
         <thead>
-          <tr className="border-b border-base-border bg-base-raised/60 text-[11.5px] uppercase tracking-wide text-ink-faint">
-            <th className="px-4 py-2.5 font-medium">Topic</th>
-            <th className="px-4 py-2.5 font-medium">Status</th>
-            <th className="px-4 py-2.5 font-medium">Confidence</th>
-            <th className="px-4 py-2.5 font-medium">Hours</th>
-            <th className="px-4 py-2.5 font-medium">Next revision</th>
-            <th className="px-4 py-2.5 font-medium w-16" />
+          <tr className="border-b text-left text-sm text-muted-foreground">
+            <th className="p-4">Technology</th>
+
+            <th className="p-4">Topic</th>
+
+            <th className="p-4">Confidence</th>
+
+            <th className="p-4">Created</th>
+
+            <th className="p-4">Actions</th>
           </tr>
         </thead>
+
         <tbody>
-          {filtered.map((t) => {
-            const next = nextPendingRevision(t.revisionSchedule);
-            return (
-              <tr
-                key={t.id}
-                className="border-b border-base-border last:border-0 bg-base-raised hover:bg-base-elevated/50 transition-colors group"
-              >
-                <td className="px-4 py-3">
-                  <div className="font-medium text-ink">{t.topic}</div>
-                  <div className="text-[12px] text-ink-faint font-mono">
-                    {t.technology}
-                    {t.subtopic ? ` · ${t.subtopic}` : ""}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <StatusBadge status={t.status} />
-                </td>
-                <td className="px-4 py-3">
-                  <ConfidenceMeter level={t.confidence} />
-                </td>
-                <td className="px-4 py-3 font-mono text-ink-muted">
-                  {formatHours(t.hoursStudied)}
-                </td>
-                <td className="px-4 py-3 font-mono text-ink-muted">
-                  {next ? format(parseISO(next.date), "MMM d") : "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      aria-label={`Edit ${t.topic}`}
-                      onClick={() => openEditDialog(t.id)}
-                      className="rounded-md p-1.5 text-ink-muted hover:text-ink hover:bg-base-border/50"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      aria-label={`Delete ${t.topic}`}
-                      onClick={() => deleteTopic(t.id)}
-                      className="rounded-md p-1.5 text-ink-muted hover:text-signal-low hover:bg-signal-low/10"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
+          {topics.map((item) => (
+            <tr key={item.id} className="border-b transition hover:bg-muted/40">
+              <td className="p-4 font-medium">{item.technology}</td>
+
+              <td className="p-4">{item.topic}</td>
+
+              <td className="p-4">
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+                  {item.confidence ?? 0}%
+                </span>
+              </td>
+
+              <td className="p-4 text-sm text-muted-foreground">
+                {new Date(item.createdAt).toLocaleDateString()}
+              </td>
+
+              <td className="p-4">
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      onAddRevision({
+                        id: item.id,
+
+                        technology: item.technology,
+
+                        topic: item.topic,
+                      })
+                    }
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Add Revision
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={async () => {
+                      const confirmDelete =
+                        window.confirm("Delete this topic?");
+
+                      if (confirmDelete) {
+                        await deleteTopic(item.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

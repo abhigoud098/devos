@@ -1,52 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   Timer,
   Play,
+  Pause,
+  RotateCcw,
   Coffee,
   History,
   Clock3,
   Target,
-  Pause,
-  RotateCcw,
+  Moon,
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+type SessionType = "focus" | "short-break" | "long-break";
+
 type Session = {
   id: number;
+  type: SessionType;
   duration: number;
-  date: string;
+  completedAt: string;
+};
+
+const TIMER_PRESETS = {
+  focus: [25, 45, 60],
+  "short-break": [5, 10],
+  "long-break": [15, 20],
 };
 
 export default function StudyTimerPage() {
+  const [mode, setMode] = useState<SessionType>("focus");
+
   const [minutes, setMinutes] = useState(25);
 
   const [time, setTime] = useState(25 * 60);
 
   const [running, setRunning] = useState(false);
 
-  const [sessions, setSessions] = useState<Session[]>([]);
-
   const [loaded, setLoaded] = useState(false);
 
-  // LOAD TIMER DATA
+  const [sessions, setSessions] = useState<Session[]>([]);
 
   useEffect(() => {
-    const savedTimer = localStorage.getItem("timer-settings");
+    const savedSettings = localStorage.getItem("study-timer-settings");
 
-    const savedSessions = localStorage.getItem("study-sessions");
+    const savedSessions = localStorage.getItem("study-session-history");
 
-    if (savedTimer) {
-      const data = JSON.parse(savedTimer);
+    if (savedSettings) {
+      const data = JSON.parse(savedSettings);
 
-      setMinutes(data.minutes);
-
-      setTime(data.minutes * 60);
+      setMode(data.mode ?? "focus");
+      setMinutes(data.minutes ?? 25);
+      setTime((data.minutes ?? 25) * 60);
     }
 
     if (savedSessions) {
@@ -56,33 +66,23 @@ export default function StudyTimerPage() {
     setLoaded(true);
   }, []);
 
-  // SAVE TIMER SETTINGS
-
   useEffect(() => {
     if (!loaded) return;
 
     localStorage.setItem(
-      "timer-settings",
-
+      "study-timer-settings",
       JSON.stringify({
+        mode,
         minutes,
       }),
     );
-  }, [minutes, loaded]);
-
-  // SAVE SESSIONS
+  }, [mode, minutes, loaded]);
 
   useEffect(() => {
     if (!loaded) return;
 
-    localStorage.setItem(
-      "study-sessions",
-
-      JSON.stringify(sessions),
-    );
+    localStorage.setItem("study-session-history", JSON.stringify(sessions));
   }, [sessions, loaded]);
-
-  // TIMER RUNNING
 
   useEffect(() => {
     if (!running) return;
@@ -105,23 +105,49 @@ export default function StudyTimerPage() {
   function completeSession() {
     setRunning(false);
 
-    setSessions((prev) => [
-      ...prev,
+    const completedAt = new Date().toISOString();
 
+    setSessions((prev) => [
       {
         id: Date.now(),
-
+        type: mode,
         duration: minutes,
-
-        date: new Date().toLocaleDateString(),
+        completedAt,
       },
+      ...prev,
     ]);
+
+    if ("Notification" in window) {
+      if (Notification.permission === "granted") {
+        new Notification("Session Complete 🎉", {
+          body: `${minutes} minute ${mode.replace("-", " ")} finished.`,
+        });
+      }
+    }
   }
 
   function changeMinutes(value: number) {
+    if (value <= 0) return;
+
     setMinutes(value);
 
     setTime(value * 60);
+  }
+
+  function switchMode(newMode: SessionType, duration: number) {
+    setRunning(false);
+
+    setMode(newMode);
+
+    setMinutes(duration);
+
+    setTime(duration * 60);
+  }
+
+  function resetTimer() {
+    setRunning(false);
+
+    setTime(minutes * 60);
   }
 
   function formatTime() {
@@ -129,175 +155,345 @@ export default function StudyTimerPage() {
 
     const sec = time % 60;
 
-    return String(min).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
+    return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   }
 
-  const totalMinutes = sessions.reduce(
-    (sum, item) => sum + item.duration,
+  const progress = useMemo(() => {
+    return ((minutes * 60 - time) / (minutes * 60)) * 100;
+  }, [minutes, time]);
 
-    0,
-  );
+  const totalFocusMinutes = useMemo(() => {
+    return sessions
+      .filter((s) => s.type === "focus")
+      .reduce((sum, s) => sum + s.duration, 0);
+  }, [sessions]);
+
+  const totalBreakMinutes = useMemo(() => {
+    return sessions
+      .filter((s) => s.type !== "focus")
+      .reduce((sum, s) => sum + s.duration, 0);
+  }, [sessions]);
+
+  const todaySessions = useMemo(() => {
+    const today = new Date().toDateString();
+
+    return sessions.filter(
+      (s) => new Date(s.completedAt).toDateString() === today,
+    ).length;
+  }, [sessions]);
+
+  const modeTitle =
+    mode === "focus"
+      ? "Focus"
+      : mode === "short-break"
+        ? "Short Break"
+        : "Long Break";
+
+  const modeIcon =
+    mode === "focus" ? (
+      <Target className="h-5 w-5" />
+    ) : mode === "short-break" ? (
+      <Coffee className="h-5 w-5" />
+    ) : (
+      <Moon className="h-5 w-5" />
+    );
+
   return (
     <main className="mx-auto max-w-7xl px-8 py-8">
       {/* HERO */}
 
       <section className="mb-8 rounded-2xl border bg-card p-8">
         <span className="rounded-full border px-3 py-1 text-xs text-muted-foreground">
-          Focus Workspace
+          Productivity Workspace
         </span>
 
         <h1 className="mt-4 text-4xl font-bold">Study Timer</h1>
 
-        <p className="mt-3 text-muted-foreground">
-          Create custom focus sessions and track your study history.
+        <p className="mt-3 max-w-2xl text-muted-foreground">
+          Focus deeply, take healthy breaks and automatically keep every
+          completed session in your personal study history.
         </p>
       </section>
 
-      {/* STATS */}
+      {/* DASHBOARD */}
 
-      <section className="mb-8 grid gap-4 md:grid-cols-4">
+      <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
-            <Clock3 className="mb-3" />
+            <Clock3 className="mb-3 h-6 w-6" />
 
             <p className="text-sm text-muted-foreground">Focus Time</p>
 
-            <h2 className="text-3xl font-bold">{totalMinutes}m</h2>
+            <h2 className="mt-2 text-3xl font-bold">{totalFocusMinutes}m</h2>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6">
-            <Target className="mb-3" />
+            <Coffee className="mb-3 h-6 w-6" />
 
-            <p className="text-sm text-muted-foreground">Sessions</p>
+            <p className="text-sm text-muted-foreground">Break Time</p>
 
-            <h2 className="text-3xl font-bold">{sessions.length}</h2>
+            <h2 className="mt-2 text-3xl font-bold">{totalBreakMinutes}m</h2>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6">
-            <Timer className="mb-3" />
+            <Target className="mb-3 h-6 w-6" />
 
-            <p className="text-sm text-muted-foreground">Current Timer</p>
+            <p className="text-sm text-muted-foreground">Total Sessions</p>
 
-            <h2 className="text-3xl font-bold">{minutes}m</h2>
+            <h2 className="mt-2 text-3xl font-bold">{sessions.length}</h2>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6">
-            <Coffee className="mb-3" />
+            <History className="mb-3 h-6 w-6" />
 
-            <p className="text-sm text-muted-foreground">Breaks</p>
+            <p className="text-sm text-muted-foreground">Today's Sessions</p>
 
-            <h2 className="text-3xl font-bold">0</h2>
+            <h2 className="mt-2 text-3xl font-bold">{todaySessions}</h2>
           </CardContent>
         </Card>
       </section>
 
-      {/* TIMER AREA */}
-
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <Card>
-          <CardContent className="min-h-[450px] flex flex-col items-center justify-center">
-            {/* CUSTOM TIME */}
-
+          <CardContent className="p-8">
             <div className="mb-8 flex items-center gap-3">
+              {modeIcon}
+
+              <div>
+                <h2 className="text-2xl font-bold">{modeTitle}</h2>
+
+                <p className="text-muted-foreground">Choose your timer mode</p>
+              </div>
+            </div>
+
+            {/* MODE BUTTONS */}
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Button
+                variant={mode === "focus" ? "default" : "outline"}
+                onClick={() => switchMode("focus", 25)}
+              >
+                Focus
+              </Button>
+
+              <Button
+                variant={mode === "short-break" ? "default" : "outline"}
+                onClick={() => switchMode("short-break", 5)}
+              >
+                Short Break
+              </Button>
+
+              <Button
+                variant={mode === "long-break" ? "default" : "outline"}
+                onClick={() => switchMode("long-break", 15)}
+              >
+                Long Break
+              </Button>
+            </div>
+
+            {/* PRESETS */}
+
+            <div className="mt-8">
+              <h3 className="mb-3 font-medium">Presets</h3>
+
+              <div className="flex flex-wrap gap-3">
+                {TIMER_PRESETS[mode].map((preset) => (
+                  <Button
+                    key={preset}
+                    variant={preset === minutes ? "default" : "outline"}
+                    disabled={running}
+                    onClick={() => changeMinutes(preset)}
+                  >
+                    {preset} min
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* CUSTOM INPUT */}
+
+            <div className="mt-8 flex items-center gap-4">
               <Input
                 type="number"
-                min="1"
-                className="w-32 text-center"
-                value={minutes}
+                min={1}
                 disabled={running}
+                className="w-40"
+                value={minutes}
                 onChange={(e) => changeMinutes(Number(e.target.value))}
               />
 
-              <span>Minutes</span>
+              <span className="text-muted-foreground">Custom Minutes</span>
             </div>
+            {/* TIMER */}
 
-            {/* TIMER CIRCLE */}
+            <div className="mt-12 flex flex-col items-center">
+              <div className="relative flex h-72 w-72 items-center justify-center">
+                <svg
+                  className="-rotate-90 absolute h-full w-full"
+                  viewBox="0 0 220 220"
+                >
+                  <circle
+                    cx="110"
+                    cy="110"
+                    r="95"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    fill="none"
+                    className="text-muted/30"
+                  />
 
-            <div
-              className="
-              h-56
-              w-56
-              rounded-full
-              border
-              flex
-              items-center
-              justify-center
-              text-6xl
-              font-bold
-            "
-            >
-              {formatTime()}
+                  <circle
+                    cx="110"
+                    cy="110"
+                    r="95"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    fill="none"
+                    strokeLinecap="round"
+                    className={
+                      mode === "focus"
+                        ? "text-green-500"
+                        : mode === "short-break"
+                          ? "text-amber-500"
+                          : "text-sky-500"
+                    }
+                    strokeDasharray={597}
+                    strokeDashoffset={597 - (progress / 100) * 597}
+                  />
+                </svg>
+
+                <div className="z-10 text-center">
+                  <p className="mb-2 text-sm text-muted-foreground">
+                    {modeTitle}
+                  </p>
+
+                  <h2 className="text-6xl font-bold tracking-tight">
+                    {formatTime()}
+                  </h2>
+
+                  <p className="mt-3 text-muted-foreground">
+                    {Math.round(progress)}% Complete
+                  </p>
+                </div>
+              </div>
+
+              {/* CONTROLS */}
+
+              <div className="mt-10 flex flex-wrap justify-center gap-4">
+                <Button
+                  size="lg"
+                  onClick={() => setRunning(!running)}
+                  className={`group h-14 min-w-[180px] rounded-xl text-base font-semibold transition-all duration-300
+focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+${
+  running
+    ? "bg-accent text-accent-foreground hover:opacity-90 shadow-lg"
+    : "bg-accent text-accent-foreground hover:opacity-90 shadow-lg"
+}`}
+                >
+                  {running ? (
+                    <>
+                      <Pause className="mr-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+                      Pause Session
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
+                      Start Focus
+                    </>
+                  )}
+                </Button>
+
+                <Button size="lg" variant="outline" onClick={resetTimer}>
+                  <RotateCcw className="mr-2 h-5 w-5" />
+                  Reset
+                </Button>
+              </div>
+
+              <p className="mt-8 max-w-md text-center text-sm text-muted-foreground">
+                Every completed <span className="font-medium">{modeTitle}</span>{" "}
+                session is automatically stored in your study history.
+              </p>
             </div>
-
-            <div className="mt-8 flex gap-3">
-              <Button
-                className="h-14 px-10"
-                onClick={() => setRunning(!running)}
-              >
-                {running ? (
-                  <Pause className="mr-2" />
-                ) : (
-                  <Play className="mr-2" />
-                )}
-
-                {running ? "Pause" : "Start Focus"}
-              </Button>
-
-              <Button
-                variant="outline"
-                className="h-14 w-14"
-                onClick={() => {
-                  setRunning(false);
-
-                  setTime(minutes * 60);
-                }}
-              >
-                <RotateCcw />
-              </Button>
-            </div>
-
-            <p className="mt-6 text-sm text-muted-foreground text-center max-w-md">
-              Every completed focus session will be saved automatically.
-            </p>
           </CardContent>
         </Card>
-
-        {/* HISTORY */}
+        {/* SESSION HISTORY */}
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <History />
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                <h2 className="font-semibold">Session History</h2>
+              </div>
 
-              <h2 className="font-semibold">Session History</h2>
+              <span className="rounded-full border px-3 py-1 text-xs">
+                {sessions.length} Sessions
+              </span>
             </div>
 
             {sessions.length === 0 ? (
-              <div className="text-center text-muted-foreground">
-                <History className="mx-auto mb-4" />
+              <div className="flex min-h-[350px] flex-col items-center justify-center text-center">
+                <History className="mb-4 h-12 w-12 text-muted-foreground" />
 
-                <p>No sessions yet</p>
+                <p className="font-medium">No sessions yet</p>
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Complete your first focus or break session to start building
+                  your history.
+                </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {sessions
-                  .slice()
-                  .reverse()
-                  .map((session) => (
-                    <div key={session.id} className="rounded-lg border p-3">
-                      <p className="font-medium">{session.duration} minutes</p>
+              <div className="space-y-4">
+                {sessions.map((session) => {
+                  const badge =
+                    session.type === "focus"
+                      ? {
+                          label: "Focus",
+                          className:
+                            "bg-green-500/10 text-green-600 border-green-500/20",
+                        }
+                      : session.type === "short-break"
+                        ? {
+                            label: "Short Break",
+                            className:
+                              "bg-amber-500/10 text-amber-600 border-amber-500/20",
+                          }
+                        : {
+                            label: "Long Break",
+                            className:
+                              "bg-sky-500/10 text-sky-600 border-sky-500/20",
+                          };
 
-                      <p className="text-sm text-muted-foreground">
-                        {session.date}
+                  return (
+                    <div
+                      key={session.id}
+                      className="rounded-xl border p-4 transition-all hover:bg-muted/40"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-medium ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
+
+                        <span className="text-sm font-semibold">
+                          {session.duration} min
+                        </span>
+                      </div>
+
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        {new Date(session.completedAt).toLocaleString()}
                       </p>
                     </div>
-                  ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

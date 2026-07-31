@@ -2,209 +2,273 @@
 
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
+import { CheckCircle2, Flame, Target, Clock3, BookOpen } from "lucide-react";
+
 import { db } from "@/lib/db";
 import { collectDueRevisions } from "@/lib/revision";
 import { formatHours } from "@/lib/utils";
+import type { LearningTopic, RevisionEntry } from "@/lib/types";
+
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+function calculateStreak(topics: LearningTopic[]) {
+  const days = new Set<string>();
+
+  topics.forEach((topic) => {
+    if (topic.lastStudied) {
+      days.add(topic.lastStudied.slice(0, 10));
+    }
+  });
+
+  let streak = 0;
+  const today = new Date();
+
+  while (true) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - streak);
+
+    const key = date.toISOString().slice(0, 10);
+
+    if (days.has(key)) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
 
 export default function DashboardPage() {
   const topics = useLiveQuery(() => db.learningTopics.toArray(), []);
 
-  const allTopics = topics ?? [];
+  if (!topics) {
+    return (
+      <main className="mx-auto max-w-7xl px-6 py-10">
+        <p className="text-muted-foreground">Loading DevOS dashboard...</p>
+      </main>
+    );
+  }
 
-  const due = collectDueRevisions(allTopics);
+  const allTopics = topics;
+
+  const dueRevisions = collectDueRevisions(allTopics);
 
   const totalHours = allTopics.reduce(
-    (sum, topic) => sum + topic.hoursStudied,
+    (total, topic) => total + topic.hoursStudied,
     0,
   );
 
-  const inProgress = allTopics.filter(
-    (topic) => topic.status === "in-progress",
-  ).length;
-
-  const completed = allTopics.filter(
+  const completedTopics = allTopics.filter(
     (topic) => topic.status === "completed",
   ).length;
 
-  const latestTopic = [...allTopics].sort((a: any, b: any) => {
-    const aTime = new Date(a.updatedAt ?? a.createdAt ?? 0).getTime();
-    const bTime = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
-    return bTime - aTime;
-  })[0];
+  const progress =
+    allTopics.length === 0
+      ? 0
+      : Math.round((completedTopics / allTopics.length) * 100);
 
-  const recentActivity = [...allTopics]
-    .sort((a: any, b: any) => {
-      const aTime = new Date(a.updatedAt ?? a.createdAt ?? 0).getTime();
-      const bTime = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
-      return bTime - aTime;
-    })
-    .slice(0, 6);
+  const inProgress = allTopics.filter(
+    (topic) => topic.status === "in-progress" || topic.status === "revising",
+  ).length;
 
-  const date = new Date();
+  const streak = calculateStreak(allTopics);
 
-  const greeting =
-    date.getHours() < 12
-      ? "Good Morning"
-      : date.getHours() < 18
-        ? "Good Afternoon"
-        : "Good Evening";
+  const latestTopic = [...allTopics].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  )[0];
 
-  const formattedDate = date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  async function completeRevision(topicId: string, revisionDate: string) {
+    const topic = await db.learningTopics.get(topicId);
 
-  const missionItems = [];
+    if (!topic) return;
 
-  if (due.length > 0) {
-    missionItems.push(`Revise ${due.length} topic${due.length > 1 ? "s" : ""}`);
+    const updatedSchedule = topic.revisionSchedule.map(
+      (revision: RevisionEntry) =>
+        revision.date === revisionDate
+          ? {
+              ...revision,
+              done: true,
+              doneAt: new Date().toISOString(),
+            }
+          : revision,
+    );
+
+    await db.learningTopics.update(topicId, {
+      revisionSchedule: updatedSchedule,
+      updatedAt: new Date().toISOString(),
+    });
   }
-
-  if (latestTopic) {
-    missionItems.push(`Continue ${latestTopic.topic}`);
-  }
-
-  if (missionItems.length === 0) {
-    missionItems.push("Start your learning journey");
-  }
-
   return (
-    <div className="mx-auto max-w-7xl px-6 py-10">
+    <main className="mx-auto max-w-7xl px-6 py-10">
       {/* Hero */}
       <section className="mb-8">
-        <h1 className="text-4xl font-semibold tracking-tight text-foreground">
-          {greeting}
-        </h1>
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">
+            Developer Learning Command Center
+          </p>
 
-        <p className="mt-2 text-sm text-muted-foreground">{formattedDate}</p>
+          <h1 className="text-4xl font-semibold tracking-tight">
+            Welcome back 👋
+          </h1>
 
-        <p className="mt-4 max-w-2xl text-muted-foreground">
-          Small improvements made consistently become expertise over time.
-        </p>
+          <p className="max-w-2xl text-muted-foreground">
+            Build knowledge every day. Track topics, revise concepts, and grow
+            your developer skills consistently.
+          </p>
+        </div>
       </section>
 
-      {/* Today's Mission */}
+      {/* Mission */}
       <section className="mb-8">
-        <Card className="rounded-2xl border">
+        <Card className="rounded-2xl">
           <CardContent className="p-8">
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Today&apos;s Mission
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Today's Mission
                 </p>
 
                 <h2 className="mt-2 text-2xl font-semibold">
-                  Focus on what matters next
+                  Focus on the next improvement
                 </h2>
               </div>
+
+              <Target className="h-6 w-6 text-muted-foreground" />
             </div>
 
             {allTopics.length === 0 ? (
               <div className="space-y-4">
-                <p className="text-muted-foreground">
-                  No learning topics yet. Start building your knowledge base.
+                <p className="text-sm text-muted-foreground">
+                  Your knowledge base is empty. Start adding topics.
                 </p>
 
-                <Link
-                  href="/learning"
-                  className="inline-flex rounded-xl border px-4 py-2 text-sm transition hover:bg-muted"
-                >
-                  Add Your First Topic
+                <Link href="/learning">
+                  <Button>Add First Topic</Button>
                 </Link>
               </div>
             ) : (
-              <ul className="space-y-3">
-                {missionItems.map((item, index) => (
-                  <li key={index} className="flex items-center gap-3 text-sm">
-                    <span className="h-2 w-2 rounded-full bg-foreground/70" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-3">
+                {dueRevisions.length > 0 && (
+                  <div className="flex items-center gap-3 rounded-xl border p-4">
+                    <BookOpen className="h-5 w-5" />
+
+                    <p className="text-sm">
+                      Revise <strong>{dueRevisions.length}</strong> pending
+                      topics
+                    </p>
+                  </div>
+                )}
+
+                {latestTopic && (
+                  <div className="flex items-center gap-3 rounded-xl border p-4">
+                    <Clock3 className="h-5 w-5" />
+
+                    <p className="text-sm">
+                      Continue learning: <strong>{latestTopic.topic}</strong>
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
       </section>
 
       {/* Stats */}
-      <section className="mb-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="rounded-2xl transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
-          <CardContent className="p-6">
-            <p className="mb-2 text-xs text-muted-foreground">
-              🔥 Topics In Progress
-            </p>
 
-            <p className="text-3xl font-semibold">{inProgress}</p>
+      <section className="mb-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
+        <Card className="rounded-2xl">
+          <CardContent className="p-6">
+            <p className="text-xs text-muted-foreground">Total Topics</p>
+
+            <p className="mt-2 text-3xl font-semibold">{allTopics.length}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+        <Card className="rounded-2xl">
           <CardContent className="p-6">
-            <p className="mb-2 text-xs text-muted-foreground">
-              📚 Due Revisions
-            </p>
+            <p className="text-xs text-muted-foreground">Completed</p>
 
-            <p className="text-3xl font-semibold">{due.length}</p>
+            <p className="mt-2 text-3xl font-semibold">{completedTopics}</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+        <Card className="rounded-2xl">
           <CardContent className="p-6">
-            <p className="mb-2 text-xs text-muted-foreground">
-              ⏱ Total Study Hours
-            </p>
+            <p className="text-xs text-muted-foreground">Progress</p>
 
-            <p className="text-3xl font-semibold">{formatHours(totalHours)}</p>
+            <p className="mt-2 text-3xl font-semibold">{progress}%</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+        <Card className="rounded-2xl">
           <CardContent className="p-6">
-            <p className="mb-2 text-xs text-muted-foreground">
-              ✅ Completed Topics
-            </p>
+            <p className="text-xs text-muted-foreground">Study Hours</p>
 
-            <p className="text-3xl font-semibold">{completed}</p>
+            <p className="mt-2 text-3xl font-semibold">
+              {formatHours(totalHours)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <Flame className="h-4 w-4" />
+
+              <p className="text-xs text-muted-foreground">Streak</p>
+            </div>
+
+            <p className="mt-2 text-3xl font-semibold">{streak}</p>
+
+            <p className="text-xs text-muted-foreground">days</p>
           </CardContent>
         </Card>
       </section>
 
+      {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Revisions */}
-        <section className="lg:col-span-7">
-          <Card className="h-full rounded-2xl">
-            <CardContent className="p-6">
-              <h3 className="mb-5 text-lg font-semibold">
-                Today&apos;s Revisions
-              </h3>
 
-              {due.length === 0 ? (
-                <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  You're all caught up. No revisions due today.
+        <section className="lg:col-span-7">
+          <Card className="rounded-2xl">
+            <CardContent className="p-6">
+              <h3 className="mb-5 text-lg font-semibold">Today's Revisions</h3>
+
+              {dueRevisions.length === 0 ? (
+                <div className="rounded-xl border border-dashed p-8 text-center">
+                  <CheckCircle2 className="mx-auto mb-3 h-8 w-8" />
+
+                  <p className="text-sm text-muted-foreground">
+                    No revisions pending. Your memory engine is healthy.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {due.slice(0, 8).map((item: any, index: number) => (
+                  {dueRevisions.slice(0, 8).map((revision) => (
                     <div
-                      key={index}
+                      key={`${revision.topicId}-${revision.date}`}
                       className="flex items-center justify-between rounded-xl border p-4"
                     >
                       <div>
-                        <p className="font-medium">
-                          {item.topic || item.title}
-                        </p>
+                        <p className="font-medium">{revision.topic}</p>
 
                         <p className="text-sm text-muted-foreground">
-                          {item.technology}
+                          {revision.technology}
                         </p>
                       </div>
 
-                      <span className="rounded-full border px-3 py-1 text-xs">
-                        Revision Due
-                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          completeRevision(revision.topicId, revision.date)
+                        }
+                      >
+                        Complete
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -214,15 +278,16 @@ export default function DashboardPage() {
         </section>
 
         {/* Continue Learning */}
+
         <section className="lg:col-span-5">
           <Card className="rounded-2xl">
             <CardContent className="p-6">
               <h3 className="mb-5 text-lg font-semibold">Continue Learning</h3>
 
               {!latestTopic ? (
-                <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No active learning topic found.
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  No active topic found.
+                </p>
               ) : (
                 <div className="space-y-5">
                   <div>
@@ -235,40 +300,26 @@ export default function DashboardPage() {
                     </h4>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Confidence
-                      </p>
+                  <div>
+                    <div className="mb-2 flex justify-between text-sm">
+                      <span>Confidence</span>
 
-                      <p className="mt-1 font-medium">
-                        {latestTopic.confidence ?? 0}%
-                      </p>
+                      <span>{latestTopic.confidence}/5</span>
                     </div>
 
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Hours Studied
-                      </p>
-
-                      <p className="mt-1 font-medium">
-                        {formatHours(latestTopic.hoursStudied ?? 0)}
-                      </p>
+                    <div className="h-2 rounded-full bg-muted">
+                      <div
+                        className="h-2 rounded-full bg-foreground"
+                        style={{
+                          width: `${latestTopic.confidence * 20}%`,
+                        }}
+                      />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="rounded-full border px-3 py-1 text-xs">
-                      {latestTopic.status}
-                    </span>
-
-                    <Link
-                      href="/learning"
-                      className="rounded-xl border px-4 py-2 text-sm transition hover:bg-muted"
-                    >
-                      Continue
-                    </Link>
-                  </div>
+                  <Link href="/learning">
+                    <Button className="w-full">Continue</Button>
+                  </Link>
                 </div>
               )}
             </CardContent>
@@ -277,67 +328,76 @@ export default function DashboardPage() {
       </div>
 
       {/* Bottom Section */}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-12">
         {/* Activity */}
+
         <section className="lg:col-span-7">
           <Card className="rounded-2xl">
             <CardContent className="p-6">
               <h3 className="mb-5 text-lg font-semibold">Recent Activity</h3>
 
               <div className="space-y-3">
-                {recentActivity.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No activity yet.
-                  </p>
-                ) : (
-                  recentActivity.map((topic: any, index) => (
-                    <div key={index} className="rounded-xl border p-4">
+                {allTopics
+                  .slice()
+                  .sort(
+                    (a, b) =>
+                      new Date(b.updatedAt).getTime() -
+                      new Date(a.updatedAt).getTime(),
+                  )
+                  .slice(0, 5)
+                  .map((topic) => (
+                    <div key={topic.id} className="rounded-xl border p-4">
                       <p className="font-medium">{topic.topic}</p>
 
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         {topic.technology}
+                        {" • "}
+                        {topic.status}
                       </p>
                     </div>
-                  ))
-                )}
+                  ))}
               </div>
             </CardContent>
           </Card>
         </section>
 
         {/* Quick Actions */}
+
         <section className="lg:col-span-5">
           <Card className="rounded-2xl">
             <CardContent className="p-6">
               <h3 className="mb-5 text-lg font-semibold">Quick Actions</h3>
 
               <div className="grid grid-cols-2 gap-3">
-                <Link
-                  href="/learning"
-                  className="rounded-xl border p-4 text-sm transition hover:bg-muted"
-                >
-                  ➕ Add Topic
+                <Link href="/learning">
+                  <Button variant="outline" className="w-full">
+                    ➕ Add Topic
+                  </Button>
                 </Link>
 
-                <Link
-                  href="/learning"
-                  className="rounded-xl border p-4 text-sm transition hover:bg-muted"
-                >
-                  📚 Open Learning
+                <Link href="/learning">
+                  <Button variant="outline" className="w-full">
+                    📚 Learning
+                  </Button>
                 </Link>
 
-                <button className="rounded-xl border p-4 text-left text-sm transition hover:bg-muted">
-                  🚀 Add Project
-                </button>
+                <Link href="/timer">
+                  <Button variant="outline" className="w-full">
+                    ⏱ Focus
+                  </Button>
+                </Link>
 
-                <button className="rounded-xl border p-4 text-left text-sm transition hover:bg-muted">
-                  ⏱ Focus Session
-                </button>
+                <Link href="/projects">
+                  <Button variant="outline" className="w-full">
+                    🚀 Projects
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
         </section>
       </div>
-    </div>
+    </main>
   );
 }
