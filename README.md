@@ -1,58 +1,408 @@
-# DevOS — Developer Second Brain
+# 🧠 DevOS
 
-A personal, offline-only app for tracking your software engineering learning journey.
-No backend, no login, no APIs — everything lives in IndexedDB on your machine.
+> **Developer Second Brain**  
+> A premium offline workspace to manage your complete software engineering learning journey.
 
-## Getting started
+<p align="center">
+  <img src="./public/og.png" alt="DevOS Banner" width="100%">
+</p>
+
+<p align="center">
+  <strong>Learn • Revise • Build • Track • Improve</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript" />
+  <img src="https://img.shields.io/badge/TailwindCSS-06B6D4?logo=tailwindcss" />
+  <img src="https://img.shields.io/badge/Dexie-IndexedDB-blue" />
+  <img src="https://img.shields.io/badge/PWA-Ready-success" />
+  <img src="https://img.shields.io/badge/License-MIT-green" />
+</p>
+
+---
+
+## 📖 About
+
+DevOS is a **personal desktop web application** built for developers who want one place to manage everything they learn.
+
+Instead of using multiple tools for notes, DSA, revisions, projects, and resources, DevOS combines them into a single, distraction-free workspace inspired by **Linear, Notion, GitHub, and Vercel**.
+
+Everything works **offline** using **IndexedDB**, so your data stays on your computer.
+
+---
+
+# ✨ Features
+
+## 🏠 Dashboard
+
+- Today's Focus
+- Learning Streak
+- Study Hours
+- Weekly Progress
+- Monthly Goals
+- Recent Activity
+- Smart Revision Summary
+- Quick Actions
+
+---
+
+## 📚 Learning Tracker
+
+Manage every technology you're learning.
+
+Track
+
+- Technology
+- Topic
+- Subtopic
+- Confidence
+- Difficulty
+- Status
+- Notes
+- Resources
+- Hours Studied
+- Last Studied
+
+---
+
+## 🧠 Smart Revision
+
+Automatic spaced repetition.
+
+Revision Schedule
+
+- Day 1
+- Day 2
+- Day 5
+- Day 7
+- Day 10
+- Day 15
+- Day 21
+- Day 30
+- Day 60
+- Day 90
+
+Features
+
+- Today's Revisions
+- Overdue Topics
+- Revision History
+- Progress Tracking
+
+---
+
+## 💻 DSA Tracker
+
+Track your coding interview preparation.
+
+Includes
+
+- Arrays
+- Strings
+- HashMap
+- Stack
+- Queue
+- Linked List
+- Trees
+- Graphs
+- Heap
+- Trie
+- Dynamic Programming
+- Greedy
+- Sliding Window
+- Backtracking
+
+Track
+
+- Solved Problems
+- Weak Topics
+- Confidence
+- Favorite Problems
+- Notes
+
+---
+
+## 🚀 Project Manager
+
+Organize personal projects.
+
+Store
+
+- Description
+- GitHub Repository
+- Live Demo
+- Progress
+- Tech Stack
+- Tasks
+- Ideas
+- Timeline
+
+---
+
+## 📝 Notes
+
+Developer-friendly notes with
+
+- Markdown
+- Code Blocks
+- Images
+- Links
+- Checklists
+- Search
+
+---
+
+## 📖 Resources
+
+Save
+
+- Documentation
+- YouTube
+- Courses
+- Books
+- GitHub Repositories
+- Articles
+
+---
+
+## 📅 Planner
+
+Manage
+
+- Daily Tasks
+- Weekly Goals
+- Monthly Goals
+- Study Calendar
+
+---
+
+## 📈 Analytics
+
+Visualize your learning.
+
+Includes
+
+- Learning Heatmap
+- Weekly Hours
+- Monthly Growth
+- Technology Progress
+- DSA Progress
+- Revision Completion
+- Activity Charts
+
+---
+
+## ⏱ Study Timer
+
+Focus Mode
+
+- Pomodoro
+- Break Timer
+- Session History
+- Focus Statistics
+
+---
+
+## 🔔 Notifications
+
+Browser notifications for
+
+- Daily Revisions
+- Learning Streak
+- Weekly Review
+- Study Reminder
+
+---
+
+## 💾 Offline First
+
+Everything is stored locally.
+
+No
+
+- Backend
+- Authentication
+- Database Server
+- Cloud Storage
+
+Your data never leaves your computer.
+
+---
+
+# 🛠 Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| Next.js | Framework |
+| React | UI |
+| TypeScript | Type Safety |
+| Tailwind CSS | Styling |
+| Shadcn UI | Components |
+| Framer Motion | Animations |
+| Zustand | State Management |
+| Dexie | IndexedDB Wrapper |
+| React Hook Form | Forms |
+| Zod | Validation |
+| Recharts | Analytics |
+| PWA | Offline Support |
+
+---
+
+# 📂 Project Structure
+
+```
+app/
+components/
+lib/
+hooks/
+store/
+public/
+
+learning/
+revision/
+projects/
+notes/
+resources/
+planner/
+analytics/
+settings/
+```
+
+---
+
+# 🚀 Getting Started
+
+Clone the repository
+
+```bash
+git clone https://github.com/yourusername/devos.git
+```
+
+Install dependencies
 
 ```bash
 npm install
+```
+
+Run locally
+
+```bash
 npm run dev
 ```
 
-Open http://localhost:3000. That's it — no env vars, no database setup.
+Open
 
-## What's built so far
+```
+http://localhost:3000
+```
 
-- **App shell**: sidebar navigation, dark theme, design tokens (`tailwind.config.ts`),
-  Inter + JetBrains Mono type system.
-- **Learning** (`/learning`): full CRUD for tracked topics — technology, topic, subtopic,
-  status, confidence (1–5, shown as a signal-bar meter), difficulty, hours studied, notes.
-  Search + filter by status/technology. Marking a topic **Completed** automatically builds
-  its spaced-repetition schedule (day 1, 2, 5, 7, 10, 15, 21, 30, 60, 90) — see `lib/revision.ts`.
-- **Dashboard** (`/`): a lightweight placeholder (due-revisions count, in-progress count,
-  total hours) so the app is usable end-to-end. The full Dashboard (streak, weekly/monthly
-  goals, charts, quick actions, recent activity) is the next build.
-- All other sections (Smart Revision, DSA, Projects, Notes, Resources, Planner, Analytics,
-  Study Timer, Settings) are wired into navigation as "coming soon" placeholders so nothing
-  404s while they're built out one at a time.
+---
 
-## Architecture notes
+# 🎯 Design Philosophy
 
-- **Data**: Dexie (`lib/db.ts`) is the single source of truth. UI reads it reactively via
-  `dexie-react-hooks`' `useLiveQuery` — no data duplicated into Zustand.
-- **Zustand**: used only for ephemeral UI state (search text, active filters, dialog open/edit
-  target) — see `store/learning-store.ts`. Keeps persisted data and UI state cleanly separated.
-- **Forms**: `react-hook-form` + `zod` (`lib/schemas.ts`) for the Learning create/edit dialog.
-- **No shadcn CLI**: since this environment can't reach npm/registries at build time, the UI
-  primitives in `components/ui/` are hand-written (Radix + Tailwind) in the same spirit as
-  shadcn — copy-owned, not a dependency — so `npm install` alone is enough to run everything.
+DevOS follows a few simple principles.
 
-## Suggested build order (next sessions)
+- Minimal UI
+- Premium Desktop Experience
+- Dark Theme First
+- Offline First
+- Keyboard Friendly
+- No Clutter
+- Fast Navigation
+- Beautiful Typography
+- Reusable Components
 
-1. **Study Timer** — Pomodoro/focus sessions are what will populate real `hoursStudied` data
-   and session history, which the full Dashboard and Analytics both depend on.
-2. **Dashboard v2** — streak tracking, weekly/monthly goals, learning heatmap, recent activity,
-   quick actions, built on top of real Learning + Timer data.
-3. **Smart Revision** — a dedicated queue view (overdue + today, grouped by topic) using the
-   scheduling logic already in `lib/revision.ts`.
-4. **DSA Tracker**, **Projects**, **Notes**, **Resources**, **Planner**, **Analytics**,
-   **Settings** (JSON export/import backup), **Command palette (⌘K)**, **browser notifications**.
+Inspired by
 
-## A feature worth considering before we go further
+- Linear
+- Notion
+- GitHub
+- Vercel
+- Raycast
 
-Right now "Completed" is the only trigger for scheduling revisions. Worth deciding: should
-dropping confidence back down (e.g. after a failed revision) reset or extend the schedule?
-Options: (a) leave the original schedule untouched — confidence is just a signal, or
-(b) let a revision marked with low confidence push a new revision date. Flagging this now
-since it'll shape the Smart Revision queue we build next.
+---
+
+# 📸 Screenshots
+
+> Coming Soon
+
+- Dashboard
+- Learning
+- Revision
+- DSA
+- Analytics
+- Projects
+- Notes
+
+---
+
+# 🗺 Roadmap
+
+### Phase 1
+
+- [x] Project Setup
+- [x] IndexedDB
+- [x] Learning CRUD
+- [x] Smart Revision Engine
+
+### Phase 2
+
+- [ ] Premium Dashboard
+- [ ] DSA Tracker
+- [ ] Project Manager
+- [ ] Notes
+- [ ] Planner
+
+### Phase 3
+
+- [ ] Analytics
+- [ ] Heatmap
+- [ ] Browser Notifications
+- [ ] Study Timer
+- [ ] PWA
+
+### Phase 4
+
+- [ ] Command Palette
+- [ ] Keyboard Shortcuts
+- [ ] JSON Backup
+- [ ] Import / Export
+- [ ] Performance Optimizations
+
+---
+
+# 🤝 Contributing
+
+This project is currently built as a personal developer workspace, but ideas and suggestions are always welcome.
+
+---
+
+# 📄 License
+
+MIT License
+
+---
+
+# ⭐ Why DevOS?
+
+Most developers use multiple apps to manage learning.
+
+📚 Notes in Notion
+
+💻 Projects in GitHub
+
+📅 Tasks in Todo apps
+
+🧠 Revision somewhere else
+
+📈 Progress nowhere.
+
+DevOS brings everything together into **one beautiful offline workspace** designed specifically for software engineers.
+
+---
+
+<p align="center">
+Built with ❤️ using Next.js, TypeScript and lots of coffee ☕
+</p>
