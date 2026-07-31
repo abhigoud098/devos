@@ -1,0 +1,10 @@
+{
+  "name": "DevOS — Developer Second Brain",
+  "short_name": "DevOS",
+  "description": "Your personal, offline command center for your software engineering journey.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0C",
+  "theme_color": "#0A0A0C",
+  "icons": []
+}
