@@ -6,7 +6,7 @@ import { CalendarClock, CheckCircle2, Clock3, BookOpen } from "lucide-react";
 
 import { db } from "@/lib/db";
 import { collectDueRevisions } from "@/lib/revision";
-// import { markRevisionDone } from "@/lib/queries";
+import { markRevisionDone } from "@/lib/learning-repo";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

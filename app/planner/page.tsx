@@ -337,12 +337,10 @@ export default function PlannerPage() {
 
                 <Button
                   className="mt-4 w-full"
-                  variant={task.status === "Completed" ? "default" : "outline"}
+                  variant={task.status === "Completed" ? "primary" : "outline"}
                   onClick={() => toggleComplete(task.id)}
                 >
-                  {task.status === "Completed"
-                    ? "Completed ✓"
-                    : "Mark Complete"}
+                  {task.status === "Completed" ? "Completed" : "Mark Complete"}
                 </Button>
               </CardContent>
             </Card>
