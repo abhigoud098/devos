@@ -385,7 +385,7 @@ export default function StudyTimerPage() {
 
               {/* CONTROLS */}
 
-              <div className="mt-10 flex flex-wrap justify-center gap-4">
+              <div className="mt-10 flex flex-wrap justify-center gap-2">
                 <Button
                   size="lg"
                   onClick={() => setRunning(!running)}
@@ -410,8 +410,8 @@ ${
                   )}
                 </Button>
 
-                <Button size="lg" variant="outline" onClick={resetTimer}>
-                  <RotateCcw className="mr-2 h-5 w-5" />
+                <Button variant="outline" className="h-[55px]" onClick={resetTimer}>
+                  <RotateCcw className="h-5 w-15" />
                   Reset
                 </Button>
               </div>

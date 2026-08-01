@@ -1,8 +1,18 @@
-import { addDays, formatISO, isBefore, parseISO, startOfDay } from "date-fns";
+import {
+  addDays,
+  compareAsc,
+  formatISO,
+  isBefore,
+  isSameDay,
+  parseISO,
+  startOfDay,
+} from "date-fns";
+
 import {
   REVISION_OFFSETS_DAYS,
-  type RevisionEntry,
   type LearningTopic,
+  type RevisionEntry,
+  type RevisionSource,
 } from "./types";
 
 export interface DueRevision {
@@ -10,49 +20,213 @@ export interface DueRevision {
   entry: RevisionEntry;
 }
 
-/** Build a fresh revision schedule anchored to the day a topic is completed. */
-export function buildRevisionSchedule(
-  completedOn: Date = new Date(),
-): RevisionEntry[] {
-  const anchor = startOfDay(completedOn);
+export interface RevisionSummary {
+  dueToday: DueRevision[];
 
-  return REVISION_OFFSETS_DAYS.map((offsetDays) => ({
-    date: formatISO(addDays(anchor, offsetDays), { representation: "date" }),
+  upcoming: DueRevision[];
+
+  overdue: DueRevision[];
+
+  completed: DueRevision[];
+}
+
+function nowISO() {
+  return new Date().toISOString();
+}
+
+/**
+ * Create revision item
+ */
+
+export function createRevisionEntry(
+  date: string,
+  offsetDays = 0,
+  type: RevisionSource = "system",
+  notes = "",
+): RevisionEntry {
+  return {
+    id: crypto.randomUUID(),
+
+    date,
+
     offsetDays,
+
     done: false,
-  }));
+
+    createdAt: nowISO(),
+
+    source: type,
+
+    notes,
+
+    reviewCount: 0,
+  };
 }
 
-/** The next revision that isn't done yet */
-export function nextPendingRevision(
-  schedule: RevisionEntry[],
-): RevisionEntry | undefined {
+/**
+ * Auto revision timeline
+ *
+ * Day 0
+ * Day 1
+ * Day 3
+ * Day 7
+ * Day 14
+ * Day 30
+ */
+export function buildRevisionSchedule(
+  startDate: Date = new Date(),
+): RevisionEntry[] {
+  const anchor = startOfDay(startDate);
+
+  return REVISION_OFFSETS_DAYS.map((offset) => {
+    return createRevisionEntry(
+      formatISO(addDays(anchor, offset), {
+        representation: "date",
+      }),
+
+      offset,
+
+      "system",
+    );
+  });
+}
+
+/**
+ * Next revision
+ */
+export function nextPendingRevision(schedule: RevisionEntry[]) {
   return schedule
-    .filter((r) => !r.done)
-    .sort((a, b) => a.date.localeCompare(b.date))[0];
+    .filter((item) => !item.done)
+    .sort((a, b) => compareAsc(parseISO(a.date), parseISO(b.date)))[0];
 }
 
-/** True if revision is due */
-export function isOverdue(
-  entry: RevisionEntry,
-  today: Date = new Date(),
-): boolean {
+export function isOverdue(entry: RevisionEntry, today = new Date()) {
   if (entry.done) return false;
 
-  return !isBefore(startOfDay(today), parseISO(entry.date));
+  return isBefore(parseISO(entry.date), startOfDay(today));
 }
 
-/** All revisions due today or earlier */
+export function isDueToday(entry: RevisionEntry, today = new Date()) {
+  if (entry.done) return false;
+
+  return isSameDay(parseISO(entry.date), startOfDay(today));
+}
+
+export function isUpcoming(entry: RevisionEntry, today = new Date()) {
+  if (entry.done) return false;
+
+  return isBefore(startOfDay(today), parseISO(entry.date));
+}
+
+/**
+ * Topic revision completion %
+ */
+export function calculateRevisionProgress(topic: LearningTopic) {
+  const total = topic.revisionSchedule.length;
+
+  const completed = topic.revisionSchedule.filter((r) => r.done).length;
+
+  if (!total) return 0;
+
+  return Math.round((completed / total) * 100);
+}
+
+/**
+ * Remaining revisions
+ */
+export function getRemainingRevisions(topic: LearningTopic) {
+  return topic.revisionSchedule.filter((r) => !r.done).length;
+}
+
+/**
+ * Memory retention score
+ */
+export function calculateRetention(topic: LearningTopic) {
+  const total = topic.revisionSchedule.length;
+
+  const completed = topic.revisionSchedule.filter((r) => r.done).length;
+
+  if (!total) return 0;
+
+  return Math.round((completed / total) * 100);
+}
+
+/**
+ * Due revisions only
+ */
 export function collectDueRevisions(
   topics: LearningTopic[],
-  today: Date = new Date(),
-): DueRevision[] {
-  return topics.flatMap((topic) =>
-    topic.revisionSchedule
-      .filter((entry) => isOverdue(entry, today))
-      .map((entry) => ({
+  today = new Date(),
+) {
+  const summary = getRevisionSummary(topics, today);
+
+  return [...summary.dueToday, ...summary.overdue];
+}
+
+export function getRevisionSummary(
+  topics: LearningTopic[],
+  today = new Date(),
+): RevisionSummary {
+  const dueToday: DueRevision[] = [];
+
+  const overdue: DueRevision[] = [];
+
+  const upcoming: DueRevision[] = [];
+
+  const completed: DueRevision[] = [];
+
+  topics.forEach((topic) => {
+    // ignore topics without revision
+    if (!topic.needRevision) return;
+
+    topic.revisionSchedule.forEach((entry) => {
+      const item = {
         topic,
         entry,
-      })),
-  );
+      };
+
+      if (entry.done) {
+        completed.push(item);
+
+        return;
+      }
+
+      if (isDueToday(entry, today)) {
+        dueToday.push(item);
+
+        return;
+      }
+
+      if (isOverdue(entry, today)) {
+        overdue.push(item);
+
+        return;
+      }
+
+      if (isUpcoming(entry, today)) {
+        upcoming.push(item);
+      }
+    });
+  });
+
+  const sortFn = (a: DueRevision, b: DueRevision) =>
+    compareAsc(parseISO(a.entry.date), parseISO(b.entry.date));
+
+  dueToday.sort(sortFn);
+
+  overdue.sort(sortFn);
+
+  upcoming.sort(sortFn);
+
+  completed.sort(sortFn);
+
+  return {
+    dueToday,
+
+    overdue,
+
+    upcoming,
+
+    completed,
+  };
 }

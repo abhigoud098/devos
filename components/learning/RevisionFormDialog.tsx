@@ -23,6 +23,8 @@ import { Button } from "@/components/ui/button";
 
 import { db } from "@/lib/db";
 
+import { createRevisionEntry } from "@/lib/revision";
+
 type Topic = {
   id: string;
   technology: string;
@@ -31,9 +33,7 @@ type Topic = {
 
 type Props = {
   topic: Topic | null;
-
   open: boolean;
-
   onOpenChange: (open: boolean) => void;
 };
 
@@ -45,30 +45,40 @@ export function RevisionFormDialog({ topic, open, onOpenChange }: Props) {
   const [notes, setNotes] = useState("");
 
   async function handleSubmit() {
-    if (!topic || !date) {
-      return;
-    }
+    if (!topic || !date) return;
 
     const existingTopic = await db.learningTopics.get(topic.id);
 
-    if (!existingTopic) {
+    if (!existingTopic) return;
+
+    const alreadyExists = existingTopic.revisionSchedule.some(
+      (revision) => revision.date === date,
+    );
+
+    if (alreadyExists) {
+      alert("Revision already scheduled for this date");
+
       return;
     }
 
-    const newRevision = {
+    const newRevision = createRevisionEntry(
       date,
+      Number(interval),
+      "custom",
+      notes,
+    );
 
-      offsetDays: Number(interval),
-
-      done: false,
-    };
+    const updatedSchedule = [
+      ...existingTopic.revisionSchedule,
+      newRevision,
+    ].sort((a, b) => a.date.localeCompare(b.date));
 
     await db.learningTopics.update(topic.id, {
-      revisionSchedule: [
-        ...(existingTopic.revisionSchedule ?? []),
+      revisionSchedule: updatedSchedule,
 
-        newRevision,
-      ],
+      status: "revising",
+
+      updatedAt: new Date().toISOString(),
     });
 
     setDate("");
@@ -112,7 +122,7 @@ export function RevisionFormDialog({ topic, open, onOpenChange }: Props) {
           </div>
 
           <div>
-            <Label>Revision Interval</Label>
+            <Label>Repeat After</Label>
 
             <Select value={interval} onValueChange={setInterval}>
               <SelectTrigger className="mt-2">
@@ -120,7 +130,7 @@ export function RevisionFormDialog({ topic, open, onOpenChange }: Props) {
               </SelectTrigger>
 
               <SelectContent>
-                <SelectItem value="1">Tomorrow</SelectItem>
+                <SelectItem value="1">After 1 Day</SelectItem>
 
                 <SelectItem value="3">After 3 Days</SelectItem>
 
@@ -134,17 +144,17 @@ export function RevisionFormDialog({ topic, open, onOpenChange }: Props) {
           </div>
 
           <div>
-            <Label>Notes</Label>
+            <Label>Revision Notes</Label>
 
             <Input
               className="mt-2"
-              placeholder="Revision notes..."
+              placeholder="What to revise..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>

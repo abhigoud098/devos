@@ -2,31 +2,41 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { format, isToday, isPast } from "date-fns";
+import { format } from "date-fns";
+
 import {
   CalendarClock,
   CheckCircle2,
   Clock3,
   Flame,
   Brain,
-  Target,
-  TrendingUp,
-  History,
-  RotateCcw,
   CalendarDays,
   BarChart3,
 } from "lucide-react";
 
 import { db } from "@/lib/db";
-import { collectDueRevisions } from "@/lib/revision";
+
+import { getRevisionSummary, type DueRevision } from "@/lib/revision";
+
 import { markRevisionDone } from "@/lib/learning-repo";
+
 import {
   requestRevisionNotificationPermission,
   sendRevisionNotification,
 } from "@/lib/revision-notification";
+
 import { calculateRevisionStreak } from "@/lib/revision-streak";
+
+import {
+  getRevisionHistory,
+  getRevisionStats,
+  saveRevisionHistory,
+  saveRevisionStats,
+} from "@/lib/revision-storage";
+
 import RevisionCalendar from "@/components/RevisionCalendar/RevisionCalendar";
 import RetentionGraph from "@/components/RetentionGraph/RetentionGraph";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -47,118 +57,164 @@ type RevisionHistory = {
   revisionDay: number;
 };
 
+const DEFAULT_STATS: RevisionStats = {
+  completedToday: 0,
+  totalCompleted: 0,
+  streak: 0,
+  accuracy: 0,
+  lastCompletedDate: null,
+};
+
 export default function RevisionPage() {
   const topics = useLiveQuery(() => db.learningTopics.toArray(), []);
 
-  const [stats, setStats] = useState<RevisionStats>({
-    completedToday: 0,
-    totalCompleted: 0,
-    streak: 0,
-    accuracy: 0,
-    lastCompletedDate: null,
-  });
+  const [stats, setStats] = useState<RevisionStats>(DEFAULT_STATS);
 
   const [history, setHistory] = useState<RevisionHistory[]>([]);
 
-  const revisions = topics ? collectDueRevisions(topics) : [];
-
-  const dueToday = useMemo(
-    () => revisions.filter((r) => isToday(new Date(r.entry.date))),
-    [revisions],
-  );
-
-  const overdue = useMemo(
-    () =>
-      revisions.filter(
-        (r) =>
-          isPast(new Date(r.entry.date)) && !isToday(new Date(r.entry.date)),
-      ),
-    [revisions],
-  );
-
-  const totalTopics = topics?.length ?? 0;
-
   /*
-    LOAD DATA
-  */
+LOAD DATA
+*/
 
   useEffect(() => {
-    const savedStats = localStorage.getItem("revision-stats");
+    const savedStats = getRevisionStats();
 
-    const savedHistory = localStorage.getItem("revision-history");
+    const savedHistory = getRevisionHistory();
 
     if (savedStats) {
-      setStats(JSON.parse(savedStats));
+      const today = new Date().toISOString().split("T")[0];
+
+      if (savedStats.lastCompletedDate !== today) {
+        setStats({
+          ...savedStats,
+
+          completedToday: 0,
+
+          accuracy: 0,
+        });
+      } else {
+        setStats(savedStats);
+      }
     }
 
     if (savedHistory) {
-      setHistory(JSON.parse(savedHistory));
+      setHistory(savedHistory);
     }
   }, []);
 
   /*
-    SAVE DATA
-  */
+SAVE DATA
+*/
 
   useEffect(() => {
-    localStorage.setItem("revision-stats", JSON.stringify(stats));
+    saveRevisionStats(stats);
   }, [stats]);
 
   useEffect(() => {
-    localStorage.setItem("revision-history", JSON.stringify(history));
+    saveRevisionHistory(history);
   }, [history]);
 
   /*
-    NOTIFICATION CHECK
-  */
+REVISION SUMMARY
+*/
+
+  const summary = useMemo(() => {
+    if (!topics) {
+      return {
+        dueToday: [],
+        overdue: [],
+        upcoming: [],
+        completed: [],
+      };
+    }
+
+    return getRevisionSummary(topics);
+  }, [topics]);
+
+  const pendingRevisions: DueRevision[] = [
+    ...summary.dueToday,
+
+    ...summary.overdue,
+  ];
+
+  /*
+ONLY ACTIVE REVISION TOPICS
+*/
+
+  const activeRevisionTopics = useMemo(() => {
+    return (
+      topics?.filter(
+        (topic) =>
+          topic.needRevision &&
+          topic.revisionSchedule.some((revision) => !revision.done),
+      ) ?? []
+    );
+  }, [topics]);
+
+  /*
+ALL COMPLETED CHECK
+*/
+
+  const allRevisionCompleted =
+    topics &&
+    topics.length > 0 &&
+    topics.every(
+      (topic) =>
+        !topic.needRevision ||
+        topic.revisionSchedule.every((revision) => revision.done),
+    );
+
+  /*
+STREAK
+*/
+
+  const streak = useMemo(() => {
+    return calculateRevisionStreak(history);
+  }, [history]);
 
   useEffect(() => {
-    async function checkReminder() {
+    setStats((prev) => ({
+      ...prev,
+
+      streak,
+    }));
+  }, [streak]);
+
+  /*
+NOTIFICATION
+*/
+
+  useEffect(() => {
+    async function notify() {
       const allowed = await requestRevisionNotificationPermission();
 
       if (!allowed) return;
 
       const data = await db.learningTopics.toArray();
 
-      const pending = collectDueRevisions(data);
+      const result = getRevisionSummary(data);
 
-      if (pending.length) {
-        sendRevisionNotification(pending.length);
+      const count = result.dueToday.length + result.overdue.length;
+
+      if (count) {
+        sendRevisionNotification(count);
       }
     }
 
-    checkReminder();
+    notify();
   }, []);
 
   /*
-    REAL STREAK
-  */
-
-  const realStreak = useMemo(() => {
-    return calculateRevisionStreak(history);
-  }, [history]);
-
-  /*
-    UPDATE STREAK DISPLAY
-  */
-
-  useEffect(() => {
-    setStats((prev) => ({
-      ...prev,
-      streak: realStreak,
-    }));
-  }, [realStreak]);
-
-  const completedToday = stats.completedToday;
-
-  const streak = stats.streak;
-
-  const accuracy = stats.accuracy;
+ADD HISTORY
+*/
 
   function addRevisionHistory(
     topicId: string,
+
     topic: string,
+
     technology: string,
+
     revisionDay: number,
   ) {
     const item: RevisionHistory = {
@@ -177,124 +233,144 @@ export default function RevisionPage() {
 
     setHistory((prev) => [item, ...prev]);
   }
+  /*
+ UPDATE STATS
+ */
 
   function updateRevisionStats() {
     const today = new Date().toISOString().split("T")[0];
 
     setStats((prev) => {
-      const completed = prev.completedToday + 1;
+      const totalCompleted = prev.totalCompleted + 1;
 
       return {
         ...prev,
 
-        completedToday: completed,
+        completedToday: prev.completedToday + 1,
 
-        totalCompleted: prev.totalCompleted + 1,
+        totalCompleted,
 
-        accuracy:
-          dueToday.length === 0
-            ? 100
-            : Math.min(100, Math.round((completed / dueToday.length) * 100)),
+        accuracy: Math.min(
+          100,
+          Math.round(
+            (totalCompleted / Math.max(totalCompleted, history.length + 1)) *
+              100,
+          ),
+        ),
 
         lastCompletedDate: today,
       };
     });
   }
 
-  function resetTodayStats() {
-    setStats((prev) => ({
-      ...prev,
+  /*
+ COMPLETE REVISION
+ */
 
-      completedToday: 0,
+  async function handleCompleteRevision(
+    topic: DueRevision["topic"],
 
-      accuracy: 0,
-    }));
+    entry: DueRevision["entry"],
+  ) {
+    const alreadyDone = history.some(
+      (item) =>
+        item.topicId === topic.id && item.revisionDay === entry.offsetDays,
+    );
+
+    if (alreadyDone) return;
+
+    await markRevisionDone(
+      topic.id,
+
+      entry.date,
+    );
+
+    /*
+ CHECK ALL REVISION COMPLETED
+ */
+
+    const updatedSchedule = topic.revisionSchedule.map((revision) =>
+      revision.id === entry.id
+        ? {
+            ...revision,
+
+            done: true,
+          }
+        : revision,
+    );
+
+    const completedAll = updatedSchedule.every((revision) => revision.done);
+
+    if (completedAll) {
+      await db.learningTopics.update(
+        topic.id,
+
+        {
+          needRevision: false,
+        },
+      );
+    }
+
+    addRevisionHistory(
+      topic.id,
+
+      topic.topic,
+
+      topic.technology,
+
+      entry.offsetDays,
+    );
+
+    updateRevisionStats();
   }
+
+  /*
+ ANALYTICS
+ */
+
+  const totalCompleted =
+    topics?.reduce(
+      (sum, topic) =>
+        sum + topic.revisionSchedule.filter((revision) => revision.done).length,
+
+      0,
+    ) ?? 0;
+
+  const totalRevision =
+    topics?.reduce(
+      (sum, topic) => sum + topic.revisionSchedule.length,
+
+      0,
+    ) ?? 0;
+
+  const retention =
+    totalRevision === 0
+      ? 0
+      : Math.round((totalCompleted / totalRevision) * 100);
+
   return (
     <main className="mx-auto max-w-7xl px-8 py-8">
-      {/* HERO */}
-
-      <section className="mb-8 rounded-3xl border bg-card p-8">
-        <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground">
-          <Brain className="h-4 w-4" />
-          Smart Revision Workspace
-        </div>
-
-        <h1 className="mt-5 text-4xl font-bold tracking-tight">
-          Keep Your Knowledge Fresh
-        </h1>
-
-        <p className="mt-3 max-w-2xl text-muted-foreground">
-          Smart spaced repetition system with calendar tracking, retention
-          analytics and learning streak.
-        </p>
-      </section>
-
-      {/* TOP STATS */}
-
-      <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <CalendarClock className="mb-3 h-6 w-6 text-primary" />
-
-            <p className="text-sm text-muted-foreground">Due Today</p>
-
-            <h2 className="text-3xl font-bold mt-2">{dueToday.length}</h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <CheckCircle2 className="mb-3 h-6 w-6 text-green-500" />
-
-            <p className="text-sm text-muted-foreground">Completed</p>
-
-            <h2 className="text-3xl font-bold mt-2">{completedToday}</h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <Flame className="mb-3 h-6 w-6 text-orange-500" />
-
-            <p className="text-sm text-muted-foreground">Revision Streak</p>
-
-            <h2 className="text-3xl font-bold mt-2">{streak} Days</h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <TrendingUp className="mb-3 h-6 w-6 text-blue-500" />
-
-            <p className="text-sm text-muted-foreground">Accuracy</p>
-
-            <h2 className="text-3xl font-bold mt-2">{accuracy}%</h2>
-          </CardContent>
-        </Card>
-      </section>
-
       {/* ANALYTICS */}
 
-      <section className="grid gap-6 lg:grid-cols-2 mb-8">
+      <section className="mb-8 grid gap-6 lg:grid-cols-2">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-5">
+            <div className="mb-5 flex items-center gap-2">
               <CalendarDays className="h-5 w-5" />
 
-              <h2 className="font-semibold text-xl">Revision Calendar</h2>
+              <h2 className="text-xl font-semibold">Revision Calendar</h2>
             </div>
 
-            <RevisionCalendar history={history} revisions={revisions} />
+            <RevisionCalendar history={history} revisions={pendingRevisions} />
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-5">
+            <div className="mb-5 flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
 
-              <h2 className="font-semibold text-xl">Retention Graph</h2>
+              <h2 className="text-xl font-semibold">Retention Graph</h2>
             </div>
 
             <RetentionGraph history={history} />
@@ -302,90 +378,176 @@ export default function RevisionPage() {
         </Card>
       </section>
 
-      {/* REVISION LIST */}
+      {/* REVISION TRACKER */}
 
-      <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <section>
         <Card>
           <CardContent className="p-8">
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Revision Queue</h2>
+                <h2 className="text-2xl font-bold">Revision Progress</h2>
 
-                <p className="text-muted-foreground mt-1">
-                  Complete pending reviews to strengthen memory.
+                <p className="text-muted-foreground">
+                  Complete your revision cycles and strengthen memory.
                 </p>
               </div>
 
-              <Target className="h-10 w-10 text-primary" />
+              <Brain className="h-10 w-10" />
             </div>
 
-            <div className="mt-8 space-y-4">
-              {revisions.length === 0 ? (
-                <div className="rounded-2xl border border-dashed py-16 text-center">
-                  <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-green-500" />
+            <div className="mt-8 space-y-6">
+              {allRevisionCompleted ? (
+                <div
+                  className="
+rounded-3xl
+border
+bg-muted/30
+py-20
+text-center
+"
+                >
+                  <CheckCircle2
+                    className="
+mx-auto
+h-16
+w-16
+text-emerald-500
+"
+                  />
 
-                  <h3 className="text-xl font-semibold">All caught up 🎉</h3>
+                  <h3 className="mt-6 text-3xl font-bold">🎉 Amazing Work!</h3>
 
-                  <p className="text-muted-foreground mt-2">
-                    No revision pending.
+                  <p className="mt-3 text-muted-foreground">
+                    You completed all revision cycles.
+                    <br />
+                    Your memory retention is getting stronger.
                   </p>
+
+                  <div
+                    className="
+mt-6
+inline-flex
+items-center
+gap-2
+rounded-full
+border
+px-5
+py-2
+"
+                  >
+                    <Flame className="h-5 w-5" />
+                    {streak} days learning streak
+                  </div>
                 </div>
               ) : (
-                revisions.map(({ topic, entry }) => {
-                  const dueDate = new Date(entry.date);
+                activeRevisionTopics.map((topic) => {
+                  const completed = topic.revisionSchedule.filter(
+                    (r) => r.done,
+                  ).length;
+
+                  const total = topic.revisionSchedule.length;
+
+                  const progress =
+                    total === 0 ? 0 : Math.round((completed / total) * 100);
+
+                  const nextRevision = topic.revisionSchedule.find(
+                    (r) => !r.done,
+                  );
 
                   return (
-                    <Card key={`${topic.id}-${entry.date}`}>
+                    <Card key={topic.id} className="border">
                       <CardContent className="p-6">
-                        <div className="flex flex-col gap-5 lg:flex-row lg:justify-between">
+                        <div className="flex justify-between">
                           <div>
-                            <div className="flex gap-3 items-center">
-                              <h3 className="text-xl font-semibold">
-                                {topic.topic}
-                              </h3>
+                            <h3 className="text-xl font-bold">{topic.topic}</h3>
 
-                              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
-                                Day {entry.offsetDays}
-                              </span>
-                            </div>
-
-                            <p className="text-muted-foreground mt-2">
+                            <p className="text-muted-foreground">
                               {topic.technology}
                             </p>
-
-                            <div className="flex gap-2 mt-3 text-sm text-muted-foreground">
-                              <Clock3 className="h-4 w-4" />
-
-                              {format(dueDate, "dd MMM yyyy")}
-                            </div>
                           </div>
 
-                          <Button
-                            className="bg-emerald-600 text-white"
-                            onClick={async () => {
-                              const exists = history.some(
-                                (item) =>
-                                  item.topicId === topic.id &&
-                                  item.revisionDay === entry.offsetDays,
-                              );
+                          <div className="text-right">
+                            <p className="text-xl font-bold">
+                              {completed}/{total}
+                            </p>
 
-                              if (exists) return;
+                            <p className="text-xs text-muted-foreground">
+                              Completed
+                            </p>
+                          </div>
+                        </div>
 
-                              await markRevisionDone(topic.id, entry.date);
-
-                              addRevisionHistory(
-                                topic.id,
-                                topic.topic,
-                                topic.technology,
-                                entry.offsetDays,
-                              );
-
-                              updateRevisionStats();
+                        <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="
+h-full
+bg-primary
+transition-all
+"
+                            style={{
+                              width: `${progress}%`,
                             }}
-                          >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Mark Reviewed
-                          </Button>
+                          />
+                        </div>
+
+                        <div className="mt-6 space-y-3">
+                          {topic.revisionSchedule
+
+                            .filter((revision) => !revision.done)
+
+                            .map((revision) => (
+                              <div
+                                key={revision.id}
+                                className="
+flex
+items-center
+justify-between
+rounded-xl
+border
+p-4
+"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Clock3 className="h-5 w-5" />
+
+                                  <div>
+                                    <p className="font-medium">
+                                      {revision.offsetDays === 0
+                                        ? "Day 0 - First Review"
+                                        : `Day ${revision.offsetDays}`}
+                                    </p>
+
+                                    <p className="text-xs text-muted-foreground">
+                                      {format(
+                                        new Date(revision.date),
+
+                                        "dd MMM yyyy",
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {nextRevision?.id === revision.id && (
+                                  <Button
+                                    size="sm"
+                                    className="
+bg-emerald-600
+text-white
+"
+                                    onClick={() =>
+                                      handleCompleteRevision(
+                                        topic,
+
+                                        revision,
+                                      )
+                                    }
+                                  >
+                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                    Complete
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
                         </div>
                       </CardContent>
                     </Card>
@@ -395,155 +557,6 @@ export default function RevisionPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* RIGHT SIDEBAR */}
-
-        <div className="space-y-6">
-          {/* DAILY GOAL */}
-
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold">Today's Goal</h3>
-
-              <p className="mt-2 text-sm text-muted-foreground">
-                {completedToday} of {dueToday.length} revisions completed
-              </p>
-
-              <div className="mt-5 h-3 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{
-                    width: `${
-                      dueToday.length === 0
-                        ? 100
-                        : Math.min(
-                            100,
-                            (completedToday / dueToday.length) * 100,
-                          )
-                    }%`,
-                  }}
-                />
-              </div>
-
-              <Button
-                variant="outline"
-                className="mt-4 w-full"
-                onClick={resetTodayStats}
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Reset Today
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* STREAK */}
-
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Flame className="mx-auto mb-4 h-12 w-12 text-orange-500" />
-
-              <h3 className="text-5xl font-bold">{streak}</h3>
-
-              <p className="text-muted-foreground mt-2">
-                Consecutive revision days
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* ACHIEVEMENTS */}
-
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4">Achievements</h3>
-
-              <div className="space-y-3">
-                <div className="rounded-xl border p-4">
-                  🏆 {stats.totalCompleted}/100 Reviews
-                </div>
-
-                <div className="rounded-xl border p-4">
-                  🔥 {streak}/7 Day Streak
-                </div>
-
-                <div className="rounded-xl border p-4">🧠 Memory Builder</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* QUICK STATS */}
-
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4">Quick Stats</h3>
-
-              <div className="space-y-4 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Topics</span>
-
-                  <b>{totalTopics}</b>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Due Today</span>
-
-                  <b>{dueToday.length}</b>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Overdue</span>
-
-                  <b className="text-red-500">{overdue.length}</b>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Reviews</span>
-
-                  <b>{stats.totalCompleted}</b>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* HISTORY */}
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <History className="h-5 w-5" />
-
-                <h3 className="font-semibold">Recent Reviews</h3>
-              </div>
-
-              <div className="space-y-3">
-                {history.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No history yet.
-                  </p>
-                ) : (
-                  history.slice(0, 5).map((item) => (
-                    <div key={item.id} className="rounded-xl border p-3">
-                      <p className="font-medium">{item.topic}</p>
-
-                      <p className="text-xs text-muted-foreground">
-                        {item.technology}
-                        {" • "}
-                        Day {item.revisionDay}
-                      </p>
-
-                      <p className="text-xs mt-1 text-muted-foreground">
-                        {format(
-                          new Date(item.reviewedAt),
-
-                          "dd MMM yyyy HH:mm",
-                        )}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </section>
     </main>
   );

@@ -1,8 +1,9 @@
 "use client";
 
-import { Trash2, RotateCcw } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLiveQuery } from "dexie-react-hooks";
+
 import { db } from "@/lib/db";
 import { deleteTopic } from "@/lib/learning-repo";
 
@@ -15,7 +16,21 @@ type Props = {
 };
 
 export function LearningTable({ onAddRevision }: Props) {
-  const topics = useLiveQuery(() => db.learningTopics.toArray(), []);
+  const topics = useLiveQuery(
+    () =>
+      db.learningTopics
+        .filter((item) => {
+          // Hide only topics whose complete revision cycle is finished
+
+          const revisionCompleted =
+            item.revisionSchedule?.length > 0 &&
+            item.revisionSchedule.every((revision) => revision.done);
+
+          return !revisionCompleted;
+        })
+        .toArray(),
+    [],
+  );
 
   if (!topics) {
     return (
@@ -28,7 +43,7 @@ export function LearningTable({ onAddRevision }: Props) {
   if (topics.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-10 text-center">
-        <p className="text-muted-foreground">No learning topics added yet.</p>
+        <p className="text-muted-foreground">No active learning topics.</p>
       </div>
     );
   }
@@ -52,13 +67,29 @@ export function LearningTable({ onAddRevision }: Props) {
 
         <tbody>
           {topics.map((item) => (
-            <tr key={item.id} className="border-b transition hover:bg-muted/40">
+            <tr
+              key={item.id}
+              className="
+              border-b
+              transition
+              hover:bg-muted/40
+              "
+            >
               <td className="p-4 font-medium">{item.technology}</td>
 
               <td className="p-4">{item.topic}</td>
 
               <td className="p-4">
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+                <span
+                  className="
+                  rounded-full
+                  bg-primary/10
+                  px-3
+                  py-1
+                  text-xs
+                  text-primary
+                  "
+                >
                   {item.confidence ?? 0}%
                 </span>
               </td>
@@ -69,23 +100,6 @@ export function LearningTable({ onAddRevision }: Props) {
 
               <td className="p-4">
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      onAddRevision({
-                        id: item.id,
-
-                        technology: item.technology,
-
-                        topic: item.topic,
-                      })
-                    }
-                  >
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Add Revision
-                  </Button>
-
                   <Button
                     size="sm"
                     variant="destructive"

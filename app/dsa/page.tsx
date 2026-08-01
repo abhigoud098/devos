@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Brain, Clock, X, CheckCircle2, Trash2 } from "lucide-react";
+
+import {
+  Plus,
+  Brain,
+  Clock,
+  X,
+  CheckCircle2,
+  Trash2,
+  CalendarClock,
+  RotateCcw,
+} from "lucide-react";
 
 import {
   Dialog,
@@ -41,15 +51,40 @@ const patterns = [
   "Sliding Window",
 ];
 
+type RevisionData = {
+  enabled: boolean;
+  date: string;
+  interval: string;
+  notes: string;
+  done: boolean;
+};
+
 type Problem = {
   id: number;
+
   name: string;
+
   number: string;
+
   pattern: string;
+
   difficulty: string;
+
   status: string;
+
   struggle: string;
+
   learning: string;
+
+  revision: RevisionData;
+};
+
+const defaultRevision: RevisionData = {
+  enabled: false,
+  date: "",
+  interval: "7 Days",
+  notes: "",
+  done: false,
 };
 
 export default function Page() {
@@ -59,41 +94,56 @@ export default function Page() {
 
   const [problems, setProblems] = useState<Problem[]>([]);
 
-  // Important fix
   const [loaded, setLoaded] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
+
     number: "",
+
     pattern: "",
+
     difficulty: "",
+
     status: "",
+
     struggle: "",
+
     learning: "",
+
+    revision: {
+      ...defaultRevision,
+    },
   });
 
-  // LOAD FROM LOCAL STORAGE
+  // LOAD DATA
 
   useEffect(() => {
     const saved = localStorage.getItem("dsa-problems");
 
     if (saved) {
-      setProblems(JSON.parse(saved));
+      const parsed = JSON.parse(saved);
+
+      const migrated = parsed.map((item: any) => ({
+        ...item,
+
+        revision: item.revision ?? {
+          ...defaultRevision,
+        },
+      }));
+
+      setProblems(migrated);
     }
 
     setLoaded(true);
   }, []);
 
-  // SAVE TO LOCAL STORAGE
+  // SAVE DATA
 
   useEffect(() => {
     if (!loaded) return;
 
-    localStorage.setItem(
-      "dsa-problems",
-
-      JSON.stringify(problems),
-    );
+    localStorage.setItem("dsa-problems", JSON.stringify(problems));
   }, [problems, loaded]);
 
   function addProblem() {
@@ -109,12 +159,22 @@ export default function Page() {
 
     setForm({
       name: "",
+
       number: "",
+
       pattern: "",
+
       difficulty: "",
+
       status: "",
+
       struggle: "",
+
       learning: "",
+
+      revision: {
+        ...defaultRevision,
+      },
     });
 
     setOpen(false);
@@ -130,10 +190,27 @@ export default function Page() {
     localStorage.removeItem("dsa-problems");
   }
 
+  function toggleRevision(id: number) {
+    setProblems((prev) =>
+      prev.map((problem) =>
+        problem.id === id
+          ? {
+              ...problem,
+
+              revision: {
+                ...problem.revision,
+
+                done: !problem.revision.done,
+              },
+            }
+          : problem,
+      ),
+    );
+  }
+
   const filteredProblems = selectedPattern
     ? problems.filter((problem) => problem.pattern === selectedPattern)
     : problems;
-
   return (
     <main className="mx-auto max-w-7xl px-8 py-8">
       <section className="mb-10 rounded-3xl border bg-card p-8">
@@ -159,12 +236,19 @@ export default function Page() {
               </Button>
             </DialogTrigger>
 
-            <DialogContent>
+            <DialogContent
+              className="
+              bg-background
+              border
+              shadow-2xl
+              max-w-lg
+            "
+            >
               <DialogHeader>
                 <DialogTitle>Add DSA Problem</DialogTitle>
               </DialogHeader>
 
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
                 <Input
                   placeholder="Problem Name"
                   value={form.name}
@@ -277,6 +361,96 @@ export default function Page() {
                   }
                 />
 
+                <div className="rounded-xl border p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2 items-center">
+                      <CalendarClock size={18} />
+
+                      <span className="font-semibold">Revision</span>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant={form.revision.enabled ? "default" : "outline"}
+                      onClick={() =>
+                        setForm({
+                          ...form,
+
+                          revision: {
+                            ...form.revision,
+
+                            enabled: !form.revision.enabled,
+                          },
+                        })
+                      }
+                    >
+                      {form.revision.enabled ? "Enabled" : "Disabled"}
+                    </Button>
+                  </div>
+
+                  {form.revision.enabled && (
+                    <>
+                      <Input
+                        type="date"
+                        value={form.revision.date}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+
+                            revision: {
+                              ...form.revision,
+
+                              date: e.target.value,
+                            },
+                          })
+                        }
+                      />
+
+                      <Select
+                        onValueChange={(value) =>
+                          setForm({
+                            ...form,
+
+                            revision: {
+                              ...form.revision,
+
+                              interval: value,
+                            },
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Revision Interval" />
+                        </SelectTrigger>
+
+                        <SelectContent>
+                          <SelectItem value="1 Day">1 Day</SelectItem>
+
+                          <SelectItem value="7 Days">7 Days</SelectItem>
+
+                          <SelectItem value="30 Days">30 Days</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Textarea
+                        placeholder="Revision notes"
+                        value={form.revision.notes}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+
+                            revision: {
+                              ...form.revision,
+
+                              notes: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </>
+                  )}
+                </div>
+
                 <Button className="w-full" onClick={addProblem}>
                   Save Problem
                 </Button>
@@ -285,7 +459,6 @@ export default function Page() {
           </Dialog>
         </div>
       </section>
-
       <section>
         <div className="flex justify-between mb-5">
           <h2 className="text-xl font-semibold">Patterns</h2>
@@ -300,14 +473,14 @@ export default function Page() {
           {patterns.map((pattern) => (
             <Card
               key={pattern}
-              className="cursor-pointer"
+              className="cursor-pointer hover:shadow-lg transition"
               onClick={() => setSelectedPattern(pattern)}
             >
               <CardContent className="p-6">
                 <h3 className="font-semibold">{pattern}</h3>
 
                 <p className="text-sm text-muted-foreground">
-                  {problems.filter((p) => p.pattern === pattern).length}
+                  {problems.filter((p) => p.pattern === pattern).length}{" "}
                   Problems
                 </p>
               </CardContent>
@@ -345,11 +518,21 @@ export default function Page() {
                     </p>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 items-center">
                     {problem.status === "Solved" ? (
                       <CheckCircle2 className="text-green-500" />
                     ) : (
                       <Clock className="text-orange-500" />
+                    )}
+
+                    {problem.revision.enabled && (
+                      <Button
+                        size="icon"
+                        variant={problem.revision.done ? "default" : "outline"}
+                        onClick={() => toggleRevision(problem.id)}
+                      >
+                        <RotateCcw size={16} />
+                      </Button>
                     )}
 
                     <Button
@@ -362,17 +545,49 @@ export default function Page() {
                   </div>
                 </div>
 
-                <p className="mt-4">
-                  <b>Difficulty:</b> {problem.difficulty}
-                </p>
+                <div className="mt-4 space-y-2">
+                  <p>
+                    <b>Difficulty:</b> {problem.difficulty}
+                  </p>
 
-                <p className="mt-2">
-                  <b>Struggle:</b> {problem.struggle}
-                </p>
+                  <p>
+                    <b>Struggle:</b> {problem.struggle}
+                  </p>
 
-                <p className="mt-2">
-                  <b>Learning:</b> {problem.learning}
-                </p>
+                  <p>
+                    <b>Learning:</b> {problem.learning}
+                  </p>
+
+                  {problem.revision.enabled && (
+                    <div className="mt-4 rounded-xl border p-4">
+                      <div className="flex items-center gap-2">
+                        <CalendarClock size={16} />
+
+                        <b>Revision</b>
+                      </div>
+
+                      <p className="text-sm mt-2">
+                        Date: {problem.revision.date || "Not set"}
+                      </p>
+
+                      <p className="text-sm">
+                        Interval: {problem.revision.interval}
+                      </p>
+
+                      {problem.revision.done && (
+                        <p className="text-sm text-green-500 mt-2">
+                          ✓ Revision Completed
+                        </p>
+                      )}
+
+                      {problem.revision.notes && (
+                        <p className="text-sm mt-2">
+                          Notes: {problem.revision.notes}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
