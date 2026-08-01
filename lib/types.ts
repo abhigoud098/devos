@@ -44,7 +44,7 @@ export interface RevisionEntry {
   /**
    * Spaced repetition day offset
    */
-  offsetDays?: number;
+  offsetDays: number;
 
   /**
    * When this revision item was created
