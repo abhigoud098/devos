@@ -1,3 +1,6 @@
+
+
+
 # 🧠 DevOS
 
 > **Developer Second Brain**  
@@ -32,6 +35,33 @@ Instead of using multiple tools for notes, DSA, revisions, projects, and resourc
 Everything works **offline** using **IndexedDB**, so your data stays on your computer.
 
 ---
+
+# 🚧 Development Status
+
+DevOS is currently **under active development**.
+
+The foundation of the application is already built, including:
+
+- ✅ Offline-first architecture using IndexedDB
+- ✅ Learning management system
+- ✅ Smart spaced repetition engine
+- ✅ Local data persistence
+- ✅ Modern desktop-first UI foundation
+
+The next phases focus on expanding DevOS into a complete **Developer Productivity Operating System**, with upcoming features such as:
+
+- 🧠 DSA Progress Tracker
+- 📝 Developer Notes System
+- 🚀 Project Management
+- 📊 Learning Analytics & Insights
+- ⏱ Focus Timer & Study Sessions
+- 🔔 Smart Notifications
+- 📦 Backup, Import & Export
+- ⌨️ Keyboard-driven workflows
+
+DevOS is being built iteratively with a focus on **performance, simplicity, offline reliability, and a premium developer experience**.
+
+> Building a personal operating system for developers, one feature at a time. 🚀
 
 # ✨ Features
 
