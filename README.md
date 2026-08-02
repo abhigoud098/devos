@@ -270,7 +270,6 @@ Your data never leaves your computer.
 | TypeScript | Type Safety |
 | Tailwind CSS | Styling |
 | Shadcn UI | Components |
-| Framer Motion | Animations |
 | Zustand | State Management |
 | Dexie | IndexedDB Wrapper |
 | React Hook Form | Forms |
