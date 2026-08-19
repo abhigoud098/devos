@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   title: "DevOS — Developer Second Brain",
   description: "Your personal, offline command center for becoming a better software engineer.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

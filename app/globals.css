@@ -8,61 +8,61 @@
   }
 
   :root {
-    --background: #F8F9FB;
-    --foreground: #1A1A2E;
-    --card: #FFFFFF;
-    --popover: #FFFFFF;
-    --primary: #7C6AEF;
-    --primary-foreground: #FFFFFF;
-    --muted: #F1F3F7;
-    --muted-foreground: #6B6B7B;
-    --base: #F8F9FB;
-    --base-raised: #FFFFFF;
-    --base-elevated: #F1F3F7;
-    --base-border: #E2E4EA;
-    --base-border-strong: #C8CAD4;
-    --ink: #1A1A2E;
-    --ink-muted: #6B6B7B;
-    --ink-faint: #9A9AA5;
-    --accent: #7C6AEF;
-    --accent-soft: #7C6AEF1A;
-    --accent-strong: #9284F5;
-    --accent-foreground: #FFFFFF;
-    --signal-low: #E0685F;
-    --signal-mid: #E0A855;
-    --signal-high: #4FBF8B;
+    --background: 248 249 251;
+    --foreground: 26 26 46;
+    --card: 255 255 255;
+    --popover: 255 255 255;
+    --primary: 124 106 239;
+    --primary-foreground: 255 255 255;
+    --muted: 241 243 247;
+    --muted-foreground: 107 107 123;
+    --base: 248 249 251;
+    --base-raised: 255 255 255;
+    --base-elevated: 241 243 247;
+    --base-border: 226 228 234;
+    --base-border-strong: 200 202 212;
+    --ink: 26 26 46;
+    --ink-muted: 107 107 123;
+    --ink-faint: 154 154 165;
+    --accent: 124 106 239;
+    --accent-soft: 124 106 239;
+    --accent-strong: 146 132 245;
+    --accent-foreground: 255 255 255;
+    --signal-low: 224 104 95;
+    --signal-mid: 224 168 85;
+    --signal-high: 79 191 139;
     --card-shadow: 0 1px 0 0 rgba(0,0,0,0.04) inset, 0 8px 24px -12px rgba(0,0,0,0.08);
     --scrollbar-thumb: #D0D2DA;
-    --selection-bg: #7c6aef4d;
+    --selection-bg: rgba(124, 106, 239, 0.3);
   }
 
   html.dark {
-    --background: #0A0A0C;
-    --foreground: #ECECEF;
-    --card: #131316;
-    --popover: #1B1B20;
-    --primary: #7C6AEF;
-    --primary-foreground: #FFFFFF;
-    --muted: #1B1B20;
-    --muted-foreground: #9A9AA5;
-    --base: #0A0A0C;
-    --base-raised: #131316;
-    --base-elevated: #1B1B20;
-    --base-border: #26262C;
-    --base-border-strong: #34343C;
-    --ink: #ECECEF;
-    --ink-muted: #9A9AA5;
-    --ink-faint: #5E5E68;
-    --accent: #7C6AEF;
-    --accent-soft: #7C6AEF1A;
-    --accent-strong: #9284F5;
-    --accent-foreground: #FFFFFF;
-    --signal-low: #E0685F;
-    --signal-mid: #E0A855;
-    --signal-high: #4FBF8B;
+    --background: 10 10 12;
+    --foreground: 236 236 239;
+    --card: 19 19 22;
+    --popover: 27 27 32;
+    --primary: 124 106 239;
+    --primary-foreground: 255 255 255;
+    --muted: 27 27 32;
+    --muted-foreground: 154 154 165;
+    --base: 10 10 12;
+    --base-raised: 19 19 22;
+    --base-elevated: 27 27 32;
+    --base-border: 38 38 44;
+    --base-border-strong: 52 52 60;
+    --ink: 236 236 239;
+    --ink-muted: 154 154 165;
+    --ink-faint: 94 94 104;
+    --accent: 124 106 239;
+    --accent-soft: 124 106 239;
+    --accent-strong: 146 132 245;
+    --accent-foreground: 255 255 255;
+    --signal-low: 224 104 95;
+    --signal-mid: 224 168 85;
+    --signal-high: 79 191 139;
     --card-shadow: 0 1px 0 0 rgba(255,255,255,0.03) inset, 0 8px 24px -12px rgba(0,0,0,0.5);
     --scrollbar-thumb: #26262c;
-    --selection-bg: #7c6aef4d;
+    --selection-bg: rgba(124, 106, 239, 0.3);
   }
 
   html {
@@ -145,5 +145,32 @@ html:not(.dark) .dark\:hue-rotate-180 {
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--base-border-strong);
+  background: rgb(var(--base-border-strong));
+}
+
+/* React Day Picker responsive calendar tokens */
+.rdp-root {
+  --rdp-cell-size: clamp(28px, 7.5vw, 36px);
+  --rdp-accent-color: rgb(var(--accent));
+  --rdp-accent-background-color: rgb(var(--accent) / 0.15);
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.rdp-month_grid,
+.rdp-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+}
+
+.rdp-day {
+  width: 100% !important;
+  max-width: var(--rdp-cell-size) !important;
+  height: var(--rdp-cell-size) !important;
+}
+
+.rdp-weekday {
+  width: var(--rdp-cell-size) !important;
+  font-size: 0.75rem !important;
 }

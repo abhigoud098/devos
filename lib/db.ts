@@ -16,6 +16,11 @@ export class DevOSDatabase extends Dexie {
       learningTopics:
         "id, technology, topic, status, confidence, lastStudied, updatedAt, customRevision.revisionDate",
     });
+
+    this.version(3).stores({
+      learningTopics:
+        "id, technology, topic, status, confidence, lastStudied, scheduledDate, scheduledAt, updatedAt, customRevision.revisionDate",
+    });
   }
 }
 

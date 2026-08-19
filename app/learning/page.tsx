@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { LearningStats } from "@/components/learning/learning-stats";
 import { LearningFilters } from "@/components/learning/learning-filters";
 import { LearningTable } from "@/components/learning/learning-table";
 import { LearningFormDialog } from "@/components/learning/learning-form-dialog";
 import { RevisionFormDialog } from "@/components/learning/RevisionFormDialog";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent } from "@/components/ui/card";
+import { useLearningStore } from "@/store/learning-store";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 type SelectedTopic = {
   id: string;
@@ -14,164 +20,63 @@ type SelectedTopic = {
   topic: string;
 } | null;
 
-export default function LearningPage() {
+function LearningContent() {
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("highlight");
   const [revisionTopic, setRevisionTopic] = useState<SelectedTopic>(null);
+  const { openCreateDialog } = useLearningStore();
 
   return (
-    <main className="mx-auto max-w-7xl px-8 py-8">
-      {/* HERO */}
-
-      <section
-        className="
-        mb-8
-        rounded-2xl
-        border
-        border-border/60
-        bg-card/60
-        p-8
-        backdrop-blur-sm
-        "
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8 space-y-6 sm:space-y-8">
+      {/* 1. STANDARDIZED PAGE HEADER */}
+      <PageHeader
+        kicker="Knowledge Engine"
+        title="Learning Hub"
+        description="Track technologies, topics, scheduled study times, revision cycles, and confidence scores in one place."
       >
-        <div
-          className="
-          flex
-          flex-col
-          gap-6
-          lg:flex-row
-          lg:items-end
-          lg:justify-between
-          "
-        >
-          <div className="max-w-2xl">
-            <span
-              className="
-              mb-3
-              inline-flex
-              rounded-full
-              border
-              border-primary/20
-              bg-primary/10
-              px-3
-              py-1
-              text-xs
-              font-medium
-              text-primary
-              "
-            >
-              Developer Second Brain
-            </span>
+        <Button size="md" onClick={openCreateDialog} className="gap-1.5 shadow-md shadow-accent/20">
+          <Plus className="h-4 w-4" />
+          Add Topic
+        </Button>
+      </PageHeader>
 
-            <h1
-              className="
-              text-4xl
-              font-bold
-              tracking-tight
-              "
-            >
-              Learning
-            </h1>
-
-            <p
-              className="
-              mt-4
-              text-sm
-              leading-7
-              text-muted-foreground
-              "
-            >
-              Track technologies, topics, revision cycles, confidence score, and
-              study progress in one place. Completed revision journeys are
-              automatically archived.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* STATS */}
-
-      <section className="mb-8">
+      {/* 2. STATS */}
+      <section>
         <LearningStats />
       </section>
 
-      {/* FILTERS */}
+      {/* 3. FILTERS & SEARCH */}
+      <Card>
+        <CardContent className="p-4 sm:p-5">
+          <LearningFilters />
+        </CardContent>
+      </Card>
 
-      <section
-        className="
-        mb-6
-        rounded-2xl
-        border
-        border-border/60
-        bg-card/40
-        p-5
-        backdrop-blur-sm
-        "
-      >
-        <LearningFilters />
-      </section>
-
-      {/* TOPICS */}
-
-      <section
-        className="
-        rounded-2xl
-        border
-        border-border/60
-        bg-card/40
-        p-5
-        backdrop-blur-sm
-        "
-      >
-        <div
-          className="
-          mb-5
-          flex
-          items-center
-          justify-between
-          "
-        >
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold">Technologies & Topics</h2>
-
-              <span
-                className="
-                rounded-full
-                bg-emerald-500/10
-                px-3
-                py-1
-                text-xs
-                text-emerald-600
-                "
-              >
-                Active Learning
-              </span>
+      {/* 4. TOPICS LIST */}
+      <Card>
+        <CardContent className="p-4 sm:p-6">
+          <div className="mb-4 flex items-center justify-between pb-3 border-b border-base-border/70">
+            <div>
+              <h2 className="text-base font-bold text-ink">Active Topics</h2>
+              <p className="text-xs text-ink-muted">
+                Manage your scheduled study sessions and track your progress.
+              </p>
             </div>
-
-            <p
-              className="
-              mt-1
-              text-sm
-              text-muted-foreground
-              "
-            >
-              Continue learning topics and complete your revision cycles.
-            </p>
           </div>
-        </div>
 
-        <LearningTable
-          onAddRevision={(topic) => {
-            setRevisionTopic(topic);
-          }}
-        />
-      </section>
+          <LearningTable
+            highlightId={highlightId}
+            onAddRevision={(topic) => {
+              setRevisionTopic(topic);
+            }}
+          />
+        </CardContent>
+      </Card>
 
-      {/* ADD TOPIC */}
-
+      {/* ADD / EDIT TOPIC DIALOG */}
       <LearningFormDialog />
 
       {/* REVISION DIALOG */}
-
       <RevisionFormDialog
         topic={revisionTopic}
         open={!!revisionTopic}
@@ -181,6 +86,20 @@ export default function LearningPage() {
           }
         }}
       />
-    </main>
+    </div>
+  );
+}
+
+export default function LearningPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-64 items-center justify-center text-sm text-ink-muted">
+          Loading Learning Hub...
+        </div>
+      }
+    >
+      <LearningContent />
+    </Suspense>
   );
 }

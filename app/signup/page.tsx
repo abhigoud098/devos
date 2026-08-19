@@ -23,14 +23,14 @@ export default function SignupPage() {
     if (!loading && user) router.replace("/");
   }, [loading, router, user]);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     if (name.trim().length < 2) return setError("Please enter your full name.");
     if (password.length < 8) return setError("Password must be at least 8 characters.");
     if (password !== confirmPassword) return setError("Passwords do not match.");
     setSubmitting(true);
-    const result = signup(name, email, password);
+    const result = await signup(name, email, password);
     if (!result.success) {
       setError(result.error ?? "Unable to create your account.");
       setSubmitting(false);

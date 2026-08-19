@@ -12,21 +12,18 @@ import {
   Brain,
   CalendarDays,
   BarChart3,
+  TrendingUp,
+  Target,
 } from "lucide-react";
 
 import { db } from "@/lib/db";
-
 import { getRevisionSummary, type DueRevision } from "@/lib/revision";
-
 import { markRevisionDone } from "@/lib/learning-repo";
-
 import {
   requestRevisionNotificationPermission,
   sendRevisionNotification,
 } from "@/lib/revision-notification";
-
 import { calculateRevisionStreak } from "@/lib/revision-streak";
-
 import {
   getRevisionHistory,
   getRevisionStats,
@@ -36,9 +33,11 @@ import {
 
 import RevisionCalendar from "@/components/RevisionCalendar/RevisionCalendar";
 import RetentionGraph from "@/components/RetentionGraph/RetentionGraph";
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type RevisionStats = {
   completedToday: number;
@@ -67,29 +66,19 @@ const DEFAULT_STATS: RevisionStats = {
 
 export default function RevisionPage() {
   const topics = useLiveQuery(() => db.learningTopics.toArray(), []);
-
   const [stats, setStats] = useState<RevisionStats>(DEFAULT_STATS);
-
   const [history, setHistory] = useState<RevisionHistory[]>([]);
-
-  /*
-LOAD DATA
-*/
 
   useEffect(() => {
     const savedStats = getRevisionStats();
-
     const savedHistory = getRevisionHistory();
 
     if (savedStats) {
       const today = new Date().toISOString().split("T")[0];
-
       if (savedStats.lastCompletedDate !== today) {
         setStats({
           ...savedStats,
-
           completedToday: 0,
-
           accuracy: 0,
         });
       } else {
@@ -102,10 +91,6 @@ LOAD DATA
     }
   }, []);
 
-  /*
-SAVE DATA
-*/
-
   useEffect(() => {
     saveRevisionStats(stats);
   }, [stats]);
@@ -113,10 +98,6 @@ SAVE DATA
   useEffect(() => {
     saveRevisionHistory(history);
   }, [history]);
-
-  /*
-REVISION SUMMARY
-*/
 
   const summary = useMemo(() => {
     if (!topics) {
@@ -127,19 +108,13 @@ REVISION SUMMARY
         completed: [],
       };
     }
-
     return getRevisionSummary(topics);
   }, [topics]);
 
   const pendingRevisions: DueRevision[] = [
     ...summary.dueToday,
-
     ...summary.overdue,
   ];
-
-  /*
-ONLY ACTIVE REVISION TOPICS
-*/
 
   const activeRevisionTopics = useMemo(() => {
     return (
@@ -151,10 +126,6 @@ ONLY ACTIVE REVISION TOPICS
     );
   }, [topics]);
 
-  /*
-ALL COMPLETED CHECK
-*/
-
   const allRevisionCompleted =
     topics &&
     topics.length > 0 &&
@@ -164,10 +135,6 @@ ALL COMPLETED CHECK
         topic.revisionSchedule.every((revision) => revision.done),
     );
 
-  /*
-STREAK
-*/
-
   const streak = useMemo(() => {
     return calculateRevisionStreak(history);
   }, [history]);
@@ -175,173 +142,108 @@ STREAK
   useEffect(() => {
     setStats((prev) => ({
       ...prev,
-
       streak,
     }));
   }, [streak]);
 
-  /*
-NOTIFICATION
-*/
-
   useEffect(() => {
     async function notify() {
       const allowed = await requestRevisionNotificationPermission();
-
       if (!allowed) return;
 
       const data = await db.learningTopics.toArray();
-
       const result = getRevisionSummary(data);
-
       const count = result.dueToday.length + result.overdue.length;
-
       if (count) {
         sendRevisionNotification(count);
       }
     }
-
     notify();
   }, []);
 
-  /*
-ADD HISTORY
-*/
-
   function addRevisionHistory(
     topicId: string,
-
     topic: string,
-
     technology: string,
-
     revisionDay: number,
   ) {
     const item: RevisionHistory = {
       id: crypto.randomUUID(),
-
       topicId,
-
       topic,
-
       technology,
-
       reviewedAt: new Date().toISOString(),
-
       revisionDay,
     };
-
     setHistory((prev) => [item, ...prev]);
   }
-  /*
- UPDATE STATS
- */
 
   function updateRevisionStats() {
     const today = new Date().toISOString().split("T")[0];
-
     setStats((prev) => {
       const totalCompleted = prev.totalCompleted + 1;
-
       return {
         ...prev,
-
         completedToday: prev.completedToday + 1,
-
         totalCompleted,
-
         accuracy: Math.min(
           100,
           Math.round(
-            (totalCompleted / Math.max(totalCompleted, history.length + 1)) *
-              100,
+            (totalCompleted / Math.max(totalCompleted, history.length + 1)) * 100,
           ),
         ),
-
         lastCompletedDate: today,
       };
     });
   }
 
-  /*
- COMPLETE REVISION
- */
-
   async function handleCompleteRevision(
     topic: DueRevision["topic"],
-
     entry: DueRevision["entry"],
   ) {
     const alreadyDone = history.some(
       (item) =>
         item.topicId === topic.id && item.revisionDay === entry.offsetDays,
     );
-
     if (alreadyDone) return;
 
-    await markRevisionDone(
-      topic.id,
-
-      entry.date,
-    );
-
-    /*
- CHECK ALL REVISION COMPLETED
- */
+    await markRevisionDone(topic.id, entry.date);
 
     const updatedSchedule = topic.revisionSchedule.map((revision) =>
       revision.id === entry.id
         ? {
             ...revision,
-
             done: true,
           }
         : revision,
     );
 
     const completedAll = updatedSchedule.every((revision) => revision.done);
-
     if (completedAll) {
-      await db.learningTopics.update(
-        topic.id,
-
-        {
-          needRevision: false,
-        },
-      );
+      await db.learningTopics.update(topic.id, {
+        needRevision: false,
+      });
     }
 
     addRevisionHistory(
       topic.id,
-
       topic.topic,
-
       topic.technology,
-
       entry.offsetDays,
     );
 
     updateRevisionStats();
   }
 
-  /*
- ANALYTICS
- */
-
   const totalCompleted =
     topics?.reduce(
       (sum, topic) =>
         sum + topic.revisionSchedule.filter((revision) => revision.done).length,
-
       0,
     ) ?? 0;
 
   const totalRevision =
-    topics?.reduce(
-      (sum, topic) => sum + topic.revisionSchedule.length,
-
-      0,
-    ) ?? 0;
+    topics?.reduce((sum, topic) => sum + topic.revisionSchedule.length, 0) ?? 0;
 
   const retention =
     totalRevision === 0
@@ -349,215 +251,182 @@ ADD HISTORY
       : Math.round((totalCompleted / totalRevision) * 100);
 
   return (
-    <main className="mx-auto max-w-7xl px-8 py-8">
-      {/* ANALYTICS */}
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8 space-y-6 sm:space-y-8">
+      {/* 1. STANDARDIZED PAGE HEADER */}
+      <PageHeader
+        kicker="Memory Engine"
+        title="Smart Revision"
+        description="Strengthen long-term retention using spaced repetition algorithms. Review topics at the optimal moment of forgetting."
+      />
 
-      <section className="mb-8 grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardContent className="p-6">
-            <div className="mb-5 flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
+      {/* 2. STATS */}
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <StatCard
+          title="Due Today"
+          value={summary.dueToday.length}
+          icon={CalendarClock}
+          iconColor="text-accent bg-accent/10"
+        />
+        <StatCard
+          title="Completed Total"
+          value={totalCompleted}
+          icon={CheckCircle2}
+          iconColor="text-signal-high bg-signal-high/10"
+        />
+        <StatCard
+          title="Active Streak"
+          value={`${stats.streak}d`}
+          icon={Flame}
+          iconColor="text-orange-500 bg-orange-500/10"
+        />
+        <StatCard
+          title="Retention Rate"
+          value={`${retention}%`}
+          icon={TrendingUp}
+          iconColor="text-blue-500 bg-blue-500/10"
+        />
+      </section>
 
-              <h2 className="text-xl font-semibold">Revision Calendar</h2>
+      {/* 3. CALENDAR & RETENTION CHARTS */}
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="overflow-hidden">
+          <CardContent className="p-4 sm:p-6">
+            <div className="mb-4 flex items-center gap-2 pb-3 border-b border-base-border/70">
+              <CalendarDays className="h-4 w-4 text-accent" />
+              <h2 className="text-base font-bold text-ink">Revision Calendar</h2>
             </div>
-
             <RevisionCalendar history={history} revisions={pendingRevisions} />
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="mb-5 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-
-              <h2 className="text-xl font-semibold">Retention Graph</h2>
+        <Card className="overflow-hidden">
+          <CardContent className="p-4 sm:p-6">
+            <div className="mb-4 flex items-center gap-2 pb-3 border-b border-base-border/70">
+              <BarChart3 className="h-4 w-4 text-blue-500" />
+              <h2 className="text-base font-bold text-ink">Retention Curve</h2>
             </div>
-
             <RetentionGraph history={history} />
           </CardContent>
         </Card>
       </section>
 
-      {/* REVISION TRACKER */}
-
-      <section>
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex items-center justify-between">
+      {/* 4. ACTIVE REVISION PROGRESS & TOPICS */}
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex items-center justify-between pb-4 border-b border-base-border/70 mb-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                <Brain className="h-4 w-4" />
+              </div>
               <div>
-                <h2 className="text-2xl font-bold">Revision Progress</h2>
-
-                <p className="text-muted-foreground">
-                  Complete your revision cycles and strengthen memory.
+                <h2 className="text-base font-bold text-ink">Spaced Repetition Queue</h2>
+                <p className="text-xs text-ink-muted">
+                  Follow Leitner revision intervals: Day 0, Day 1, Day 3, Day 7, Day 14, Day 30.
                 </p>
               </div>
-
-              <Brain className="h-10 w-10" />
             </div>
+          </div>
 
-            <div className="mt-8 space-y-6">
-              {allRevisionCompleted ? (
-                <div
-                  className="
-rounded-3xl
-border
-bg-muted/30
-py-20
-text-center
-"
-                >
-                  <CheckCircle2
-                    className="
-mx-auto
-h-16
-w-16
-text-emerald-500
-"
-                  />
+          <div className="space-y-4">
+            {allRevisionCompleted ? (
+              <EmptyState
+                icon={CheckCircle2}
+                title="All revision cycles completed! 🎉"
+                description="Your memory retention is rock solid. Add new topics from the Learning Hub to start another cycle."
+              />
+            ) : activeRevisionTopics.length === 0 ? (
+              <EmptyState
+                icon={Brain}
+                title="No active revisions scheduled"
+                description="When adding or editing a topic in the Learning Hub, toggle 'Need Revision?' to automatically create spaced repetition cycles."
+              />
+            ) : (
+              activeRevisionTopics.map((topic) => {
+                const completed = topic.revisionSchedule.filter((r) => r.done).length;
+                const total = topic.revisionSchedule.length;
+                const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
+                const nextRevision = topic.revisionSchedule.find((r) => !r.done);
 
-                  <h3 className="mt-6 text-3xl font-bold">🎉 Amazing Work!</h3>
-
-                  <p className="mt-3 text-muted-foreground">
-                    You completed all revision cycles.
-                    <br />
-                    Your memory retention is getting stronger.
-                  </p>
-
+                return (
                   <div
-                    className="
-mt-6
-inline-flex
-items-center
-gap-2
-rounded-full
-border
-px-5
-py-2
-"
+                    key={topic.id}
+                    className="rounded-2xl border border-base-border/80 bg-base-raised/40 p-4 sm:p-5 space-y-4"
                   >
-                    <Flame className="h-5 w-5" />
-                    {streak} days learning streak
-                  </div>
-                </div>
-              ) : (
-                activeRevisionTopics.map((topic) => {
-                  const completed = topic.revisionSchedule.filter(
-                    (r) => r.done,
-                  ).length;
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <span className="rounded-md bg-base-elevated px-2 py-0.5 text-[11px] font-medium text-ink-muted">
+                          {topic.technology}
+                        </span>
+                        <h3 className="font-bold text-base text-ink mt-1">{topic.topic}</h3>
+                      </div>
 
-                  const total = topic.revisionSchedule.length;
+                      <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <span className="text-xs font-semibold text-ink">
+                          {completed}/{total} cycles
+                        </span>
+                        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold text-accent">
+                          {progress}%
+                        </span>
+                      </div>
+                    </div>
 
-                  const progress =
-                    total === 0 ? 0 : Math.round((completed / total) * 100);
+                    {/* Progress Bar */}
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-base-elevated">
+                      <div
+                        className="h-full rounded-full bg-accent transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
 
-                  const nextRevision = topic.revisionSchedule.find(
-                    (r) => !r.done,
-                  );
+                    {/* Schedule Steps */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
+                      {topic.revisionSchedule
+                        .filter((revision) => !revision.done)
+                        .map((revision) => {
+                          const isNext = nextRevision?.id === revision.id;
 
-                  return (
-                    <Card key={topic.id} className="border">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between">
-                          <div>
-                            <h3 className="text-xl font-bold">{topic.topic}</h3>
-
-                            <p className="text-muted-foreground">
-                              {topic.technology}
-                            </p>
-                          </div>
-
-                          <div className="text-right">
-                            <p className="text-xl font-bold">
-                              {completed}/{total}
-                            </p>
-
-                            <p className="text-xs text-muted-foreground">
-                              Completed
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="
-h-full
-bg-primary
-transition-all
-"
-                            style={{
-                              width: `${progress}%`,
-                            }}
-                          />
-                        </div>
-
-                        <div className="mt-6 space-y-3">
-                          {topic.revisionSchedule
-
-                            .filter((revision) => !revision.done)
-
-                            .map((revision) => (
-                              <div
-                                key={revision.id}
-                                className="
-flex
-items-center
-justify-between
-rounded-xl
-border
-p-4
-"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Clock3 className="h-5 w-5" />
-
-                                  <div>
-                                    <p className="font-medium">
-                                      {revision.offsetDays === 0
-                                        ? "Day 0 - First Review"
-                                        : `Day ${revision.offsetDays}`}
-                                    </p>
-
-                                    <p className="text-xs text-muted-foreground">
-                                      {format(
-                                        new Date(revision.date),
-
-                                        "dd MMM yyyy",
-                                      )}
-                                    </p>
-                                  </div>
+                          return (
+                            <div
+                              key={revision.id}
+                              className={`flex items-center justify-between rounded-xl border p-3 text-xs transition-colors ${
+                                isNext
+                                  ? "border-accent/40 bg-accent/5 ring-1 ring-accent/20"
+                                  : "border-base-border/70 bg-base-raised/60"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Clock3 className={`h-4 w-4 shrink-0 ${isNext ? "text-accent" : "text-ink-muted"}`} />
+                                <div className="truncate">
+                                  <p className="font-semibold text-ink truncate">
+                                    {revision.offsetDays === 0 ? "First Review" : `Day +${revision.offsetDays}`}
+                                  </p>
+                                  <p className="text-[10px] text-ink-muted">
+                                    {format(new Date(revision.date), "MMM d, yyyy")}
+                                  </p>
                                 </div>
-
-                                {nextRevision?.id === revision.id && (
-                                  <Button
-                                    size="sm"
-                                    className="
-bg-emerald-600
-text-white
-"
-                                    onClick={() =>
-                                      handleCompleteRevision(
-                                        topic,
-
-                                        revision,
-                                      )
-                                    }
-                                  >
-                                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                                    Complete
-                                  </Button>
-                                )}
                               </div>
-                            ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-    </main>
+
+                              {isNext && (
+                                <Button
+                                  size="sm"
+                                  className="h-7 px-2.5 text-xs gap-1 bg-signal-high text-white hover:bg-signal-high/90 shrink-0"
+                                  onClick={() => handleCompleteRevision(topic, revision)}
+                                >
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Done
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

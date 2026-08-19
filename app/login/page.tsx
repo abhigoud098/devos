@@ -23,11 +23,11 @@ function LoginContent() {
     if (!loading && user) router.replace(searchParams.get("next") || "/");
   }, [loading, router, searchParams, user]);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setSubmitting(true);
-    const result = login(email, password, rememberMe);
+    const result = await login(email, password, rememberMe);
     if (!result.success) {
       setError(result.error ?? "Unable to sign in.");
       setSubmitting(false);

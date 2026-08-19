@@ -69,6 +69,9 @@ export interface LearningTopic {
   lastStudied?: string;
   notes?: string;
   image?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  scheduledAt?: string;
   resources: Resource[];
   interviewQuestions: string[];
   needRevision: boolean;
@@ -94,5 +97,7 @@ export interface LearningFormValues {
   hoursStudied: number;
   notes?: string;
   image?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
   needRevision: boolean;
 }

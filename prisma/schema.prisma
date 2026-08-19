@@ -1,0 +1,221 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  learningTopics LearningTopic[]
+  notes          Note[]
+  projects       Project[]
+  resources      ResourceItem[]
+  plannerTasks   PlannerTask[]
+  dsaProblems    DSAProblem[]
+  studySessions  StudySession[]
+  preference     UserPreference?
+  revisionGoal   RevisionGoal?
+
+  @@map("users")
+}
+
+model LearningTopic {
+  id                 String    @id @default(uuid())
+  userId             String
+  technology         String
+  topic              String
+  subtopic           String?
+  status             String    @default("not-started") // "not-started" | "in-progress" | "revising" | "completed"
+  confidence         String    @default("3") // "1".."5" | "NA"
+  difficulty         String    @default("medium") // "easy" | "medium" | "hard" | "NA"
+  hoursStudied       Float     @default(0)
+  lastStudied        DateTime?
+  scheduledDate      String? // YYYY-MM-DD
+  scheduledTime      String? // HH:mm
+  scheduledAt        DateTime?
+  notes              String?   @db.Text
+  image              String?   @db.Text
+  needRevision       Boolean   @default(false)
+  resources          Json?     @default("[]")
+  interviewQuestions Json?     @default("[]")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revisionSchedule RevisionEntry[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, technology])
+  @@index([userId, scheduledDate])
+  @@map("learning_topics")
+}
+
+model RevisionEntry {
+  id          String    @id @default(uuid())
+  topicId     String
+  date        String // YYYY-MM-DD
+  offsetDays  Int       @default(0)
+  done        Boolean   @default(false)
+  doneAt      DateTime?
+  reviewCount Int       @default(0)
+  source      String    @default("system")
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  topic LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId])
+  @@index([date, done])
+  @@map("revision_entries")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  content   String   @db.Text
+  type      String   @default("General")
+  image     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notes")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  description String   @db.Text
+  tech        String
+  github      String   @default("")
+  live        String   @default("")
+  status      String   @default("Idea") // "Idea" | "Building" | "Completed"
+  image       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("projects")
+}
+
+model ResourceItem {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  url         String
+  description String   @db.Text
+  type        String   @default("Article") // "Youtube" | "Github" | "Article" | "Course" | "PDF"
+  image       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("resource_items")
+}
+
+model PlannerTask {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  description String   @db.Text
+  date        String // YYYY-MM-DD
+  hours       String   @default("1")
+  status      String   @default("Pending") // "Pending" | "Completed"
+  image       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, date])
+  @@map("planner_tasks")
+}
+
+model DSAProblem {
+  id               String   @id @default(uuid())
+  userId           String
+  name             String
+  number           String   @default("")
+  pattern          String   @default("Arrays")
+  method           String   @default("Two Pointer")
+  difficulty       String   @default("Medium") // "Easy" | "Medium" | "Hard"
+  status           String   @default("Solved") // "Solved" | "Revising" | "Mastered" | "Stuck"
+  struggle         String   @default("") @db.Text
+  learning         String   @default("") @db.Text
+  revisionEnabled  Boolean  @default(false)
+  revisionDate     String?
+  revisionInterval String?
+  revisionNotes    String?  @db.Text
+  revisionDone     Boolean  @default(false)
+  image            String?  @db.Text
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("dsa_problems")
+}
+
+model StudySession {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String   @default("focus") // "focus" | "short-break" | "long-break"
+  duration    Int      @default(25) // in minutes
+  completedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, completedAt])
+  @@map("study_sessions")
+}
+
+model UserPreference {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  theme              String   @default("dark")
+  dimMode            Boolean  @default(false)
+  focusDuration      Int      @default(25)
+  shortBreakDuration Int      @default(5)
+  longBreakDuration  Int      @default(15)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model RevisionGoal {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  dailyTarget  Int      @default(5)
+  weeklyTarget Int      @default(30)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("revision_goals")
+}

@@ -15,11 +15,13 @@ import {
   CheckCircle2,
   Loader2,
   Sun,
+  Lock,
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/auth/password-input";
+import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { db } from "@/lib/db";
@@ -131,13 +133,13 @@ export default function SettingsPage() {
     } finally { setWorking(null); }
   }
 
-  function updatePassword(event: FormEvent<HTMLFormElement>) {
+  async function updatePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPasswordMessage("");
     setPasswordError("");
     if (newPassword.length < 8) return setPasswordError("Your new password must be at least 8 characters.");
     if (newPassword !== confirmPassword) return setPasswordError("New passwords do not match.");
-    const result = changePassword(currentPassword, newPassword);
+    const result = await changePassword(currentPassword, newPassword);
     if (!result.success) return setPasswordError(result.error ?? "Unable to change your password.");
     setCurrentPassword("");
     setNewPassword("");
@@ -146,52 +148,39 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-8 py-8">
-      {/* Header */}
-
-      <div className="mb-10">
-        <p className="text-xs uppercase tracking-[0.25em] text-ink-faint">
-          Preferences
-        </p>
-
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight text-ink">
-          Settings
-        </h1>
-
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
-          Customize DevOS, manage your local data, browser notifications, and
-          personalize your workspace. Everything stays on your device.
-        </p>
-      </div>
+    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-8 sm:py-8 space-y-6 sm:space-y-8">
+      {/* 1. PAGE HEADER */}
+      <PageHeader
+        kicker="Preferences & Workspace"
+        title="Settings"
+        description="Customize DevOS theme, notifications, cloud persistence, and manage database backups."
+      />
 
       <div className="space-y-6">
         {/* Appearance */}
-
-        <Card className="border-base-border bg-card">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex gap-4">
-                <div className="rounded-xl bg-base-elevated p-3">
-                  <Palette className="h-5 w-5 text-accent" />
+        <Card className="border-base-border/80 bg-card">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                  <Palette className="h-5 w-5" />
                 </div>
-
                 <div>
-                  <h2 className="font-medium text-ink">Appearance</h2>
-
-                  <p className="mt-1 text-sm text-ink-muted">
-                    Customize how DevOS looks on your desktop.
+                  <h2 className="font-bold text-sm text-ink">Appearance & Themes</h2>
+                  <p className="text-xs text-ink-muted">
+                    Toggle light/dark mode and high-contrast dim settings.
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={toggleTheme}>
-                  {theme === "dark" ? <><Sun className="mr-2 h-4 w-4" /> Light mode</> : <><Moon className="mr-2 h-4 w-4" /> Dark mode</>}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={toggleTheme} className="h-9 gap-1.5 text-xs">
+                  {theme === "dark" ? <><Sun className="h-3.5 w-3.5" /> Light</> : <><Moon className="h-3.5 w-3.5" /> Dark</>}
                 </Button>
 
-                <Button variant="outline" onClick={toggleDimMode}>
-                  <Moon className="mr-2 h-4 w-4" />
-                  {dimMode ? "Standard dark" : "Use dim mode"}
+                <Button variant="outline" size="sm" onClick={toggleDimMode} className="h-9 gap-1.5 text-xs">
+                  <Moon className="h-3.5 w-3.5" />
+                  {dimMode ? "Standard Dark" : "Dim Mode"}
                 </Button>
               </div>
             </div>
@@ -199,165 +188,139 @@ export default function SettingsPage() {
         </Card>
 
         {/* Notifications */}
-
-        <Card className="border-base-border bg-card">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex gap-4">
-                <div className="rounded-xl bg-base-elevated p-3">
-                  <Bell className="h-5 w-5 text-amber-400" />
+        <Card className="border-base-border/80 bg-card">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+                  <Bell className="h-5 w-5" />
                 </div>
-
                 <div>
-                  <h2 className="font-medium text-ink">
-                    Browser Notifications
-                  </h2>
-
-                  <p className="mt-1 text-sm text-ink-muted">
-                    Get reminded about today's revisions, study goals and
-                    learning streak.
+                  <h2 className="font-bold text-sm text-ink">Browser Notifications</h2>
+                  <p className="text-xs text-ink-muted">
+                    Receive daily alerts for due revisions and scheduled study sessions.
                   </p>
                 </div>
               </div>
 
-              <Button onClick={enableNotifications} disabled={notificationPermission === "granted" || notificationPermission === "unsupported" || notificationPermission === "denied"}>
-                {notificationPermission === "granted" ? <><CheckCircle2 className="mr-2 h-4 w-4" /> Enabled</> : notificationPermission === "unsupported" ? "Unavailable" : notificationPermission === "denied" ? "Blocked in browser" : "Enable"}
+              <Button
+                size="sm"
+                onClick={enableNotifications}
+                disabled={notificationPermission === "granted" || notificationPermission === "unsupported" || notificationPermission === "denied"}
+                className="h-9 text-xs gap-1.5"
+              >
+                {notificationPermission === "granted" ? <><CheckCircle2 className="h-3.5 w-3.5 text-signal-high" /> Active</> : notificationPermission === "unsupported" ? "Unavailable" : notificationPermission === "denied" ? "Blocked" : "Enable Alerts"}
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Backup */}
-
-        <Card className="border-base-border bg-card">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex gap-4">
-                <div className="rounded-xl bg-base-elevated p-3">
-                  <Database className="h-5 w-5 text-emerald-400" />
+        {/* Backup & Restore */}
+        <Card className="border-base-border/80 bg-card">
+          <CardContent className="p-5 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-signal-high/10 text-signal-high">
+                  <Database className="h-5 w-5" />
                 </div>
-
                 <div>
-                  <h2 className="font-medium text-ink">Backup & Restore</h2>
-
-                  <p className="mt-1 text-sm text-ink-muted">
-                    Export your complete learning database as JSON or restore it
-                    anytime.
+                  <h2 className="font-bold text-sm text-ink">Data Backup & Export</h2>
+                  <p className="text-xs text-ink-muted">
+                    Export your complete database to JSON or restore from a snapshot file.
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <input ref={restoreInput} type="file" accept="application/json" onChange={importBackup} className="hidden" />
-                <Button variant="outline" onClick={() => restoreInput.current?.click()} disabled={working !== null}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  {working === "import" ? "Importing…" : "Import"}
+                <Button variant="outline" size="sm" onClick={() => restoreInput.current?.click()} disabled={working !== null} className="h-9 text-xs gap-1.5">
+                  <Upload className="h-3.5 w-3.5" />
+                  {working === "import" ? "Restoring..." : "Import"}
                 </Button>
 
-                <Button onClick={exportBackup} disabled={working !== null}>
-                  <Download className="mr-2 h-4 w-4" />
-                  {working === "export" ? "Exporting…" : "Export"}
+                <Button size="sm" onClick={exportBackup} disabled={working !== null} className="h-9 text-xs gap-1.5">
+                  <Download className="h-3.5 w-3.5" />
+                  {working === "export" ? "Exporting..." : "Export JSON"}
                 </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-        {(backupMessage || backupError) && <p role="status" className={`rounded-lg border px-3 py-2 text-sm ${backupError ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"}`}>{backupError || backupMessage}</p>}
 
-        {/* Storage */}
-
-        <Card className="border-base-border bg-card">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex gap-4">
-                <div className="rounded-xl bg-base-elevated p-3">
-                  <HardDrive className="h-5 w-5 text-cyan-400" />
-                </div>
-
-                <div>
-                  <h2 className="font-medium text-ink">Local Storage</h2>
-
-                  <p className="mt-1 text-sm text-ink-muted">
-                    All your notes, topics, revisions and projects are stored
-                    securely inside your browser using IndexedDB.
-                  </p>
-                </div>
-              </div>
-
-              <span className="mt-2 rounded-full border border-base-border bg-base-elevated px-3 py-1 text-xs font-medium text-ink-muted">{storageUsed} used</span>
-            </div>
+            {(backupMessage || backupError) && (
+              <p className={`rounded-xl border px-3.5 py-2.5 text-xs ${backupError ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-signal-high/30 bg-signal-high/10 text-signal-high"}`}>
+                {backupError || backupMessage}
+              </p>
+            )}
           </CardContent>
         </Card>
 
-        {/* Privacy */}
-
-        <Card className="border-base-border bg-card">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex gap-4">
-                <div className="rounded-xl bg-base-elevated p-3">
-                  <Shield className="h-5 w-5 text-sky-400" />
-                </div>
-
-                <div>
-                  <h2 className="font-medium text-ink">Privacy</h2>
-
-                  <p className="mt-1 text-sm text-ink-muted">
-                    DevOS works completely offline. No backend. No cloud. No
-                    account. Your data never leaves your computer.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Password */}
-
-        <Card className="border-base-border bg-card">
-          <CardContent className="p-6">
-            <div className="mb-6 flex gap-4">
-              <div className="rounded-xl bg-base-elevated p-3">
-                <Shield className="h-5 w-5 text-accent" />
+        {/* Security & Password */}
+        <Card className="border-base-border/80 bg-card">
+          <CardContent className="p-5 sm:p-6 space-y-5">
+            <div className="flex items-center gap-3.5 pb-4 border-b border-base-border/70">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                <Lock className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-medium text-ink">Change password</h2>
-                <p className="mt-1 text-sm text-ink-muted">Update the password saved locally for this account.</p>
+                <h2 className="font-bold text-sm text-ink">Change Password</h2>
+                <p className="text-xs text-ink-muted">
+                  Update your authentication credentials securely.
+                </p>
               </div>
             </div>
-            <form onSubmit={updatePassword} className="max-w-lg space-y-4">
-              {passwordError && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">{passwordError}</p>}
-              {passwordMessage && <p role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">{passwordMessage}</p>}
-              <label className="block space-y-2 text-sm text-ink-muted">Current password<PasswordInput value={currentPassword} onChange={setCurrentPassword} autoComplete="current-password" /></label>
-              <label className="block space-y-2 text-sm text-ink-muted">New password<PasswordInput value={newPassword} onChange={setNewPassword} placeholder="At least 8 characters" autoComplete="new-password" /></label>
-              <label className="block space-y-2 text-sm text-ink-muted">Confirm new password<PasswordInput value={confirmPassword} onChange={setConfirmPassword} placeholder="Repeat your new password" autoComplete="new-password" /></label>
-              <Button type="submit">Update password</Button>
+
+            <form onSubmit={updatePassword} className="max-w-lg space-y-3.5">
+              {passwordError && (
+                <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-xs text-red-400">
+                  {passwordError}
+                </p>
+              )}
+              {passwordMessage && (
+                <p className="rounded-xl border border-signal-high/30 bg-signal-high/10 px-3.5 py-2.5 text-xs text-signal-high font-medium">
+                  {passwordMessage}
+                </p>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-ink">Current Password</label>
+                <PasswordInput value={currentPassword} onChange={setCurrentPassword} autoComplete="current-password" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-ink">New Password</label>
+                <PasswordInput value={newPassword} onChange={setNewPassword} placeholder="At least 8 characters" autoComplete="new-password" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-ink">Confirm New Password</label>
+                <PasswordInput value={confirmPassword} onChange={setConfirmPassword} placeholder="Repeat new password" autoComplete="new-password" />
+              </div>
+
+              <Button type="submit" size="sm" className="mt-2 shadow-md shadow-accent/20">
+                Update Password
+              </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Danger */}
-
-        <Card className="border-red-500/30 bg-red-500/10">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex gap-4">
-                <div className="rounded-xl bg-red-500/10 p-3">
-                  <Trash2 className="h-5 w-5 text-red-400" />
+        {/* Danger Zone */}
+        <Card className="border-red-500/30 bg-red-500/5">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/15 text-red-400">
+                  <Trash2 className="h-5 w-5" />
                 </div>
-
                 <div>
-                  <h2 className="font-medium text-ink">Reset DevOS</h2>
-
-                  <p className="mt-1 text-sm text-ink-muted">
-                    Permanently delete all local data including learning topics,
-                    revisions, notes, projects and analytics.
+                  <h2 className="font-bold text-sm text-ink">Reset DevOS Workspace</h2>
+                  <p className="text-xs text-ink-muted">
+                    Clear local storage and reset all cached state on this device.
                   </p>
                 </div>
               </div>
 
-              <Button variant="destructive" onClick={resetDevOS} disabled={working !== null}>
-                {working === "reset" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Reset Everything
+              <Button variant="destructive" size="sm" onClick={resetDevOS} disabled={working !== null} className="h-9 text-xs">
+                {working === "reset" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Reset Everything
               </Button>
             </div>
           </CardContent>
