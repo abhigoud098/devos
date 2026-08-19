@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, Suspense } from "react";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 
-export default function LoginPage() {
+function LoginContent() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -50,4 +50,12 @@ export default function LoginPage() {
     </form>
     <p className="mt-6 text-center text-sm text-ink-muted">New to DevOS? <Link href="/signup" className="font-medium text-accent hover:underline">Create an account</Link></p>
   </AuthLayout>;
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<AuthLayout title="Welcome back" subtitle="Sign in to continue to your developer workspace."><div className="space-y-5"><div className="h-11 rounded-lg bg-base-200 animate-pulse" /><div className="h-11 rounded-lg bg-base-200 animate-pulse" /><div className="h-11 rounded-lg bg-base-200 animate-pulse" /></div></AuthLayout>}>
+      <LoginContent />
+    </Suspense>
+  );
 }
