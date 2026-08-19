@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Timer,
@@ -33,6 +33,25 @@ const TIMER_PRESETS = {
   "long-break": [15, 20],
 };
 
+function removeDuplicateSessions(sessionHistory: Session[]) {
+  const seen = new Set<string>();
+
+  return sessionHistory.filter((session) => {
+    // A timer cannot legitimately finish the same type and duration more than
+    // once in a second. This removes records created by the previous duplicate
+    // completion bug while preserving separate timer runs.
+    const completedSecond = Math.floor(
+      new Date(session.completedAt).getTime() / 1000,
+    );
+    const key = `${session.type}-${session.duration}-${completedSecond}`;
+
+    if (seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  });
+}
+
 export default function StudyTimerPage() {
   const [mode, setMode] = useState<SessionType>("focus");
 
@@ -45,6 +64,8 @@ export default function StudyTimerPage() {
   const [loaded, setLoaded] = useState(false);
 
   const [sessions, setSessions] = useState<Session[]>([]);
+
+  const completionInProgress = useRef(false);
 
   useEffect(() => {
     const savedSettings = localStorage.getItem("study-timer-settings");
@@ -60,7 +81,7 @@ export default function StudyTimerPage() {
     }
 
     if (savedSessions) {
-      setSessions(JSON.parse(savedSessions));
+      setSessions(removeDuplicateSessions(JSON.parse(savedSessions)));
     }
 
     setLoaded(true);
@@ -88,19 +109,19 @@ export default function StudyTimerPage() {
     if (!running) return;
 
     const interval = setInterval(() => {
-      setTime((prev) => {
-        if (prev <= 1) {
-          completeSession();
-
-          return minutes * 60;
-        }
-
-        return prev - 1;
-      });
+      setTime((prev) => Math.max(prev - 1, 0));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [running, minutes]);
+  }, [running]);
+
+  useEffect(() => {
+    if (!running || time !== 0 || completionInProgress.current) return;
+
+    completionInProgress.current = true;
+    completeSession();
+    setTime(minutes * 60);
+  }, [running, time, minutes]);
 
   function completeSession() {
     setRunning(false);
@@ -148,6 +169,16 @@ export default function StudyTimerPage() {
     setRunning(false);
 
     setTime(minutes * 60);
+  }
+
+  function toggleTimer() {
+    if (running) {
+      setRunning(false);
+      return;
+    }
+
+    completionInProgress.current = false;
+    setRunning(true);
   }
 
   function formatTime() {
@@ -276,21 +307,21 @@ export default function StudyTimerPage() {
 
             <div className="grid gap-3 sm:grid-cols-3">
               <Button
-                variant={mode === "focus" ? "default" : "outline"}
+                variant={mode === "focus" ? "primary" : "outline"}
                 onClick={() => switchMode("focus", 25)}
               >
                 Focus
               </Button>
 
               <Button
-                variant={mode === "short-break" ? "default" : "outline"}
+                variant={mode === "short-break" ? "primary" : "outline"}
                 onClick={() => switchMode("short-break", 5)}
               >
                 Short Break
               </Button>
 
               <Button
-                variant={mode === "long-break" ? "default" : "outline"}
+                variant={mode === "long-break" ? "primary" : "outline"}
                 onClick={() => switchMode("long-break", 15)}
               >
                 Long Break
@@ -306,7 +337,7 @@ export default function StudyTimerPage() {
                 {TIMER_PRESETS[mode].map((preset) => (
                   <Button
                     key={preset}
-                    variant={preset === minutes ? "default" : "outline"}
+                    variant={preset === minutes ? "primary" : "outline"}
                     disabled={running}
                     onClick={() => changeMinutes(preset)}
                   >
@@ -386,17 +417,17 @@ export default function StudyTimerPage() {
               {/* CONTROLS */}
 
               <div className="mt-10 flex flex-wrap justify-center gap-2">
-                <Button
-                  size="lg"
-                  onClick={() => setRunning(!running)}
-                  className={`group h-14 min-w-[180px] rounded-xl text-base font-semibold transition-all duration-300
+              <Button
+                size="md"
+                onClick={toggleTimer}
+                className={`group h-14 min-w-[180px] rounded-xl text-base font-semibold transition-all duration-300
 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
 ${
   running
     ? "bg-accent text-accent-foreground hover:opacity-90 shadow-lg"
     : "bg-accent text-accent-foreground hover:opacity-90 shadow-lg"
 }`}
-                >
+              >
                   {running ? (
                     <>
                       <Pause className="mr-2 h-5 w-5 transition-transform duration-300 group-hover:scale-110" />

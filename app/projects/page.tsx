@@ -99,6 +99,29 @@ export default function ProjectsPage() {
     );
   }, [projects, loaded]);
 
+  // LOAD FORM DRAFT
+
+  useEffect(() => {
+    if (open && editId === null) {
+      const saved = localStorage.getItem("project-form-draft");
+      if (saved) {
+        try {
+          setForm(JSON.parse(saved));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, [open, editId]);
+
+  // SAVE FORM DRAFT
+
+  useEffect(() => {
+    if (editId === null) {
+      localStorage.setItem("project-form-draft", JSON.stringify(form));
+    }
+  }, [form, editId]);
+
   // IMAGE SAVE
 
   function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -157,6 +180,8 @@ export default function ProjectsPage() {
     setEditId(null);
 
     setOpen(false);
+
+    localStorage.removeItem("project-form-draft");
   }
 
   function editProject(project: Project) {
@@ -225,9 +250,23 @@ export default function ProjectsPage() {
             </p>
           </div>
 
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              setOpen(isOpen);
+              if (!isOpen) {
+                setEditId(null);
+                setForm(emptyForm);
+              }
+            }}
+          >
             <DialogTrigger asChild>
-              <Button>
+              <Button
+                onClick={() => {
+                  setEditId(null);
+                  setForm(emptyForm);
+                }}
+              >
                 <Plus className="mr-2" />
                 New Project
               </Button>

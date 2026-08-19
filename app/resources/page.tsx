@@ -29,14 +29,11 @@ import {
 
 type Resource = {
   id: number;
-
   title: string;
-
   url: string;
-
   description: string;
-
   type: "Youtube" | "Github" | "Article" | "Course" | "PDF";
+  image: string;
 };
 
 const types = ["Youtube", "Github", "Article", "Course", "PDF"] as const;
@@ -50,6 +47,8 @@ export default function ResourcesPage() {
     description: "",
 
     type: "Youtube" as Resource["type"],
+
+    image: "",
   };
 
   const [resources, setResources] = useState<Resource[]>([]);
@@ -88,6 +87,46 @@ export default function ResourcesPage() {
     );
   }, [resources, loaded]);
 
+  // LOAD FORM DRAFT
+
+  useEffect(() => {
+    if (open && editId === null) {
+      const saved = localStorage.getItem("resource-form-draft");
+      if (saved) {
+        try {
+          setForm(JSON.parse(saved));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, [open, editId]);
+
+  // SAVE FORM DRAFT
+
+  useEffect(() => {
+    if (editId === null) {
+      localStorage.setItem("resource-form-draft", JSON.stringify(form));
+    }
+  }, [form, editId]);
+
+  function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert("Image size must be less than 1MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({
+        ...prev,
+        image: reader.result as string,
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+
   function saveResource() {
     if (!form.title) return;
 
@@ -120,6 +159,8 @@ export default function ResourcesPage() {
     setEditId(null);
 
     setOpen(false);
+
+    localStorage.removeItem("resource-form-draft");
   }
 
   function editResource(item: Resource) {
@@ -131,6 +172,8 @@ export default function ResourcesPage() {
       description: item.description,
 
       type: item.type,
+
+      image: item.image,
     });
 
     setEditId(item.id);
@@ -165,9 +208,23 @@ export default function ResourcesPage() {
             </p>
           </div>
 
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              setOpen(isOpen);
+              if (!isOpen) {
+                setEditId(null);
+                setForm(emptyForm);
+              }
+            }}
+          >
             <DialogTrigger asChild>
-              <Button>
+              <Button
+                onClick={() => {
+                  setEditId(null);
+                  setForm(emptyForm);
+                }}
+              >
                 <Plus className="mr-2" />
                 Add Resource
               </Button>
@@ -228,6 +285,15 @@ export default function ResourcesPage() {
                     <option key={type}>{type}</option>
                   ))}
                 </select>
+
+                <Input type="file" accept="image/*" onChange={handleImage} />
+
+                {form.image && (
+                  <img
+                    src={form.image}
+                    className="rounded-lg h-32 w-full object-cover"
+                  />
+                )}
 
                 <Button className="w-full" onClick={saveResource}>
                   {editId ? "Update" : "Save"}
@@ -323,6 +389,13 @@ export default function ResourcesPage() {
                     </Button>
                   </div>
                 </div>
+
+                {item.image && (
+                  <img
+                    src={item.image}
+                    className="rounded-lg mt-3 h-40 w-full object-cover"
+                  />
+                )}
 
                 <p className="mt-3 text-sm text-muted-foreground">
                   {item.description}

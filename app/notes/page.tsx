@@ -29,6 +29,7 @@ type Note = {
   title: string;
   content: string;
   type: string;
+  image: string;
 };
 
 export default function NotesPage() {
@@ -36,6 +37,7 @@ export default function NotesPage() {
     title: "",
     content: "",
     type: "",
+    image: "",
   };
 
   const [open, setOpen] = useState(false);
@@ -74,6 +76,46 @@ export default function NotesPage() {
     );
   }, [notes, loaded]);
 
+  // LOAD FORM DRAFT
+
+  useEffect(() => {
+    if (open && editId === null) {
+      const saved = localStorage.getItem("note-form-draft");
+      if (saved) {
+        try {
+          setForm(JSON.parse(saved));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, [open, editId]);
+
+  // SAVE FORM DRAFT
+
+  useEffect(() => {
+    if (editId === null) {
+      localStorage.setItem("note-form-draft", JSON.stringify(form));
+    }
+  }, [form, editId]);
+
+  function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert("Image size must be less than 1MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({
+        ...prev,
+        image: reader.result as string,
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+
   function saveNote() {
     if (!form.title) return;
 
@@ -104,15 +146,16 @@ export default function NotesPage() {
     setEditId(null);
 
     setOpen(false);
+
+    localStorage.removeItem("note-form-draft");
   }
 
   function editNote(note: Note) {
     setForm({
       title: note.title,
-
       content: note.content,
-
       type: note.type,
+      image: note.image,
     });
 
     setEditId(note.id);
@@ -154,9 +197,23 @@ export default function NotesPage() {
             </p>
           </div>
 
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              setOpen(isOpen);
+              if (!isOpen) {
+                setEditId(null);
+                setForm(emptyForm);
+              }
+            }}
+          >
             <DialogTrigger asChild>
-              <Button>
+              <Button
+                onClick={() => {
+                  setEditId(null);
+                  setForm(emptyForm);
+                }}
+              >
                 <Plus className="mr-2" />
                 New Note
               </Button>
@@ -206,6 +263,15 @@ export default function NotesPage() {
                     })
                   }
                 />
+
+                <Input type="file" accept="image/*" onChange={handleImage} />
+
+                {form.image && (
+                  <img
+                    src={form.image}
+                    className="rounded-lg h-32 w-full object-cover"
+                  />
+                )}
 
                 <Button className="w-full" onClick={saveNote}>
                   {editId ? "Update Note" : "Save Note"}
@@ -300,6 +366,13 @@ export default function NotesPage() {
                     </Button>
                   </div>
                 </div>
+
+                {note.image && (
+                  <img
+                    src={note.image}
+                    className="rounded-lg mt-3 h-40 w-full object-cover"
+                  />
+                )}
 
                 <p className="mt-3 text-sm text-muted-foreground">
                   {note.content}

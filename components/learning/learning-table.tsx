@@ -57,6 +57,8 @@ export function LearningTable({ onAddRevision }: Props) {
 
             <th className="p-4">Topic</th>
 
+            <th className="p-4">Image</th>
+
             <th className="p-4">Confidence</th>
 
             <th className="p-4">Created</th>
@@ -78,6 +80,15 @@ export function LearningTable({ onAddRevision }: Props) {
               <td className="p-4 font-medium">{item.technology}</td>
 
               <td className="p-4">{item.topic}</td>
+
+              <td className="p-4">
+                {item.image && (
+                  <img
+                    src={item.image}
+                    className="h-10 w-10 rounded-lg object-cover"
+                  />
+                )}
+              </td>
 
               <td className="p-4">
                 <span

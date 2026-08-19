@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import {
   Dialog,
@@ -44,6 +44,31 @@ export function RevisionFormDialog({ topic, open, onOpenChange }: Props) {
 
   const [notes, setNotes] = useState("");
 
+  useEffect(() => {
+    if (open) {
+      const saved = localStorage.getItem("revision-form-draft");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setDate(parsed.date || "");
+          setInterval(parsed.interval || "7");
+          setNotes(parsed.notes || "");
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      localStorage.setItem(
+        "revision-form-draft",
+        JSON.stringify({ date, interval, notes })
+      );
+    }
+  }, [date, interval, notes, open]);
+
   async function handleSubmit() {
     if (!topic || !date) return;
 
@@ -80,6 +105,8 @@ export function RevisionFormDialog({ topic, open, onOpenChange }: Props) {
 
       updatedAt: new Date().toISOString(),
     });
+
+    localStorage.removeItem("revision-form-draft");
 
     setDate("");
 

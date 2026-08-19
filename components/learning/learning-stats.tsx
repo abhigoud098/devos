@@ -25,7 +25,7 @@ export function LearningStats() {
   const completed = topics.filter((t) => t.status === "completed").length;
   const totalHours = topics.reduce((sum, t) => sum + t.hoursStudied, 0);
   const avgConfidence = total
-    ? (topics.reduce((sum, t) => sum + t.confidence, 0) / total).toFixed(1)
+    ? (topics.reduce((sum, t) => sum + (typeof t.confidence === "number" ? t.confidence : 0), 0) / total).toFixed(1)
     : "0.0";
 
   return (

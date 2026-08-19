@@ -37,6 +37,8 @@ export async function createTopic(values: LearningFormValues): Promise<string> {
 
     notes: values.notes?.trim() || undefined,
 
+    image: values.image || undefined,
+
     lastStudied: values.status === "not-started" ? undefined : timestamp,
 
     resources: [],
@@ -96,40 +98,25 @@ export async function updateTopic(
 
   await db.learningTopics.update(id, {
     technology: values.technology.trim(),
-
     topic: values.topic.trim(),
-
     subtopic: values.subtopic?.trim() || undefined,
-
     status: values.status,
-
     confidence: values.confidence,
-
     difficulty: values.difficulty,
-
     hoursStudied: values.hoursStudied,
-
     notes: values.notes?.trim() || undefined,
-
+    image: values.image || undefined,
     lastStudied: nowISO(),
-
     needRevision,
-
     revisionSchedule,
-
     revisionStats: {
       total: revisionSchedule.length,
-
       completed,
-
       retention: revisionSchedule.length
         ? Math.round((completed / revisionSchedule.length) * 100)
         : 0,
-
-      // keep old data
       lastRevision: existing.revisionStats?.lastRevision,
     },
-
     updatedAt: nowISO(),
   });
 }

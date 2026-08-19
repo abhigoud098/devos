@@ -28,16 +28,12 @@ import {
 
 type Task = {
   id: number;
-
   title: string;
-
   description: string;
-
   date: string;
-
   hours: string;
-
   status: "Pending" | "Completed";
+  image: string;
 };
 
 export default function PlannerPage() {
@@ -46,6 +42,7 @@ export default function PlannerPage() {
     description: "",
     date: "",
     hours: "",
+    image: "",
   };
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -82,6 +79,46 @@ export default function PlannerPage() {
     );
   }, [tasks, loaded]);
 
+  // LOAD FORM DRAFT
+
+  useEffect(() => {
+    if (open && editId === null) {
+      const saved = localStorage.getItem("planner-form-draft");
+      if (saved) {
+        try {
+          setForm(JSON.parse(saved));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, [open, editId]);
+
+  // SAVE FORM DRAFT
+
+  useEffect(() => {
+    if (editId === null) {
+      localStorage.setItem("planner-form-draft", JSON.stringify(form));
+    }
+  }, [form, editId]);
+
+  function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert("Image size must be less than 1MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({
+        ...prev,
+        image: reader.result as string,
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+
   function saveTask() {
     if (!form.title) return;
 
@@ -116,17 +153,17 @@ export default function PlannerPage() {
     setEditId(null);
 
     setOpen(false);
+
+    localStorage.removeItem("planner-form-draft");
   }
 
   function editTask(task: Task) {
     setForm({
       title: task.title,
-
       description: task.description,
-
       date: task.date,
-
       hours: task.hours,
+      image: task.image,
     });
 
     setEditId(task.id);
@@ -169,9 +206,23 @@ export default function PlannerPage() {
             </p>
           </div>
 
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              setOpen(isOpen);
+              if (!isOpen) {
+                setEditId(null);
+                setForm(emptyForm);
+              }
+            }}
+          >
             <DialogTrigger asChild>
-              <Button>
+              <Button
+                onClick={() => {
+                  setEditId(null);
+                  setForm(emptyForm);
+                }}
+              >
                 <Plus className="mr-2" />
                 New Task
               </Button>
@@ -232,6 +283,15 @@ export default function PlannerPage() {
                     })
                   }
                 />
+
+                <Input type="file" accept="image/*" onChange={handleImage} />
+
+                {form.image && (
+                  <img
+                    src={form.image}
+                    className="rounded-lg h-32 w-full object-cover"
+                  />
+                )}
 
                 <Button className="w-full" onClick={saveTask}>
                   {editId ? "Update Task" : "Save Task"}
@@ -326,6 +386,13 @@ export default function PlannerPage() {
                     </Button>
                   </div>
                 </div>
+
+                {task.image && (
+                  <img
+                    src={task.image}
+                    className="rounded-lg mt-3 h-40 w-full object-cover"
+                  />
+                )}
 
                 <p className="mt-3 text-sm text-muted-foreground">
                   {task.description}

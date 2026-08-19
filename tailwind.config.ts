@@ -6,27 +6,34 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        card: "var(--card)",
+        popover: "var(--popover)",
+        primary: { DEFAULT: "var(--primary)", foreground: "var(--primary-foreground)" },
+        muted: { DEFAULT: "var(--muted)", foreground: "var(--muted-foreground)" },
         base: {
-          DEFAULT: "#0A0A0C",
-          raised: "#131316",
-          elevated: "#1B1B20",
-          border: "#26262C",
-          borderStrong: "#34343C",
+          DEFAULT: "var(--base)",
+          raised: "var(--base-raised)",
+          elevated: "var(--base-elevated)",
+          border: "var(--base-border)",
+          borderStrong: "var(--base-border-strong)",
         },
         ink: {
-          DEFAULT: "#ECECEF",
-          muted: "#9A9AA5",
-          faint: "#5E5E68",
+          DEFAULT: "var(--ink)",
+          muted: "var(--ink-muted)",
+          faint: "var(--ink-faint)",
         },
         accent: {
-          DEFAULT: "#7C6AEF",
-          soft: "#7C6AEF1A",
-          strong: "#9284F5",
+          DEFAULT: "var(--accent)",
+          soft: "var(--accent-soft)",
+          strong: "var(--accent-strong)",
+          foreground: "var(--accent-foreground)",
         },
         signal: {
-          low: "#E0685F",
-          mid: "#E0A855",
-          high: "#4FBF8B",
+          low: "var(--signal-low)",
+          mid: "var(--signal-mid)",
+          high: "var(--signal-high)",
         },
       },
       fontFamily: {
@@ -38,7 +45,7 @@ const config: Config = {
         "2xl": "1.25rem",
       },
       boxShadow: {
-        card: "0 1px 0 0 rgba(255,255,255,0.03) inset, 0 8px 24px -12px rgba(0,0,0,0.5)",
+        card: "var(--card-shadow)",
       },
       keyframes: {
         "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },

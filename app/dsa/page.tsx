@@ -51,6 +51,23 @@ const patterns = [
   "Sliding Window",
 ];
 
+const methods = [
+  "Brute Force",
+  "Two Pointer",
+  "Sliding Window",
+  "Binary Search",
+  "DFS",
+  "BFS",
+  "Dynamic Programming",
+  "Greedy",
+  "Backtracking",
+  "Divide & Conquer",
+  "Recursion",
+  "Iteration",
+  "Math",
+  "Bit Manipulation",
+];
+
 type RevisionData = {
   enabled: boolean;
   date: string;
@@ -61,22 +78,16 @@ type RevisionData = {
 
 type Problem = {
   id: number;
-
   name: string;
-
   number: string;
-
   pattern: string;
-
+  method: string;
   difficulty: string;
-
   status: string;
-
   struggle: string;
-
   learning: string;
-
   revision: RevisionData;
+  image: string;
 };
 
 const defaultRevision: RevisionData = {
@@ -91,6 +102,8 @@ export default function Page() {
   const [open, setOpen] = useState(false);
 
   const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
+
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
   const [problems, setProblems] = useState<Problem[]>([]);
 
@@ -111,6 +124,10 @@ export default function Page() {
 
     learning: "",
 
+    method: "",
+
+    image: "",
+
     revision: {
       ...defaultRevision,
     },
@@ -130,6 +147,8 @@ export default function Page() {
         revision: item.revision ?? {
           ...defaultRevision,
         },
+
+        method: item.method ?? "",
       }));
 
       setProblems(migrated);
@@ -146,6 +165,46 @@ export default function Page() {
     localStorage.setItem("dsa-problems", JSON.stringify(problems));
   }, [problems, loaded]);
 
+  // LOAD FORM DRAFT
+
+  useEffect(() => {
+    if (open) {
+      const saved = localStorage.getItem("dsa-form-draft");
+      if (saved) {
+        try {
+          setForm(JSON.parse(saved));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, [open]);
+
+  // SAVE FORM DRAFT
+
+  useEffect(() => {
+    if (open) {
+      localStorage.setItem("dsa-form-draft", JSON.stringify(form));
+    }
+  }, [form, open]);
+
+  function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert("Image size must be less than 1MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({
+        ...prev,
+        image: reader.result as string,
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+
   function addProblem() {
     if (!form.name || !form.pattern) return;
 
@@ -156,6 +215,8 @@ export default function Page() {
     };
 
     setProblems((prev) => [...prev, newProblem]);
+
+    localStorage.removeItem("dsa-form-draft");
 
     setForm({
       name: "",
@@ -171,6 +232,10 @@ export default function Page() {
       struggle: "",
 
       learning: "",
+
+      method: "",
+
+      image: "",
 
       revision: {
         ...defaultRevision,
@@ -211,6 +276,10 @@ export default function Page() {
   const filteredProblems = selectedPattern
     ? problems.filter((problem) => problem.pattern === selectedPattern)
     : problems;
+
+  const methodFilteredProblems = selectedMethod
+    ? filteredProblems.filter((problem) => problem.method === selectedMethod)
+    : filteredProblems;
   return (
     <main className="mx-auto max-w-7xl px-8 py-8">
       <section className="mb-10 rounded-3xl border bg-card p-8">
@@ -228,7 +297,28 @@ export default function Page() {
             </p>
           </div>
 
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              setOpen(isOpen);
+              if (!isOpen) {
+                setForm({
+                  name: "",
+                  number: "",
+                  pattern: "",
+                  method: "",
+                  difficulty: "",
+                  status: "",
+                  struggle: "",
+                  learning: "",
+                  image: "",
+                  revision: {
+                    ...defaultRevision,
+                  },
+                });
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button>
                 <Plus size={18} />
@@ -300,6 +390,28 @@ export default function Page() {
                     setForm({
                       ...form,
 
+                      method: value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Method" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {methods.map((method) => (
+                      <SelectItem key={method} value={method}>
+                        {method}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  onValueChange={(value) =>
+                    setForm({
+                      ...form,
+
                       difficulty: value,
                     })
                   }
@@ -361,6 +473,15 @@ export default function Page() {
                   }
                 />
 
+                <Input type="file" accept="image/*" onChange={handleImage} />
+
+                {form.image && (
+                  <img
+                    src={form.image}
+                    className="rounded-lg h-32 w-full object-cover"
+                  />
+                )}
+
                 <div className="rounded-xl border p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex gap-2 items-center">
@@ -371,7 +492,7 @@ export default function Page() {
 
                     <Button
                       type="button"
-                      variant={form.revision.enabled ? "default" : "outline"}
+                      variant={form.revision.enabled ? "primary" : "outline"}
                       onClick={() =>
                         setForm({
                           ...form,
@@ -489,22 +610,55 @@ export default function Page() {
         </div>
       </section>
 
+      <section className="mt-8">
+        <div className="flex justify-between mb-5">
+          <h2 className="text-xl font-semibold">Methods</h2>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {methods.map((method) => (
+            <Card
+              key={method}
+              className="cursor-pointer hover:shadow-lg transition"
+              onClick={() => setSelectedMethod(method)}
+            >
+              <CardContent className="p-6">
+                <h3 className="font-semibold">{method}</h3>
+
+                <p className="text-sm text-muted-foreground">
+                  {problems.filter((p) => p.method === method).length}{" "}
+                  Problems
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
       <section className="mt-12">
         <div className="flex justify-between mb-5">
           <h2 className="text-xl font-semibold">
-            {selectedPattern ? `${selectedPattern} Problems` : "All Problems"}
+            {selectedPattern ? `${selectedPattern} Problems` : selectedMethod ? `${selectedMethod} Problems` : "All Problems"}
           </h2>
 
-          {selectedPattern && (
-            <Button variant="ghost" onClick={() => setSelectedPattern(null)}>
-              <X size={16} />
-              Clear
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {selectedPattern && (
+              <Button variant="ghost" onClick={() => setSelectedPattern(null)}>
+                <X size={16} />
+                Clear Pattern
+              </Button>
+            )}
+            {selectedMethod && (
+              <Button variant="ghost" onClick={() => setSelectedMethod(null)}>
+                <X size={16} />
+                Clear Method
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-4">
-          {filteredProblems.map((problem) => (
+          {methodFilteredProblems.map((problem) => (
             <Card key={problem.id}>
               <CardContent className="p-5">
                 <div className="flex justify-between">
@@ -515,6 +669,7 @@ export default function Page() {
 
                     <p className="text-sm text-muted-foreground">
                       {problem.pattern}
+                      {problem.method && ` • ${problem.method}`}
                     </p>
                   </div>
 
@@ -528,7 +683,7 @@ export default function Page() {
                     {problem.revision.enabled && (
                       <Button
                         size="icon"
-                        variant={problem.revision.done ? "default" : "outline"}
+                        variant={problem.revision.done ? "primary" : "outline"}
                         onClick={() => toggleRevision(problem.id)}
                       >
                         <RotateCcw size={16} />
@@ -544,6 +699,13 @@ export default function Page() {
                     </Button>
                   </div>
                 </div>
+
+                {problem.image && (
+                  <img
+                    src={problem.image}
+                    className="rounded-lg mt-3 h-40 w-full object-cover"
+                  />
+                )}
 
                 <div className="mt-4 space-y-2">
                   <p>

@@ -6,28 +6,130 @@
   * {
     @apply border-base-border;
   }
+
+  :root {
+    --background: #F8F9FB;
+    --foreground: #1A1A2E;
+    --card: #FFFFFF;
+    --popover: #FFFFFF;
+    --primary: #7C6AEF;
+    --primary-foreground: #FFFFFF;
+    --muted: #F1F3F7;
+    --muted-foreground: #6B6B7B;
+    --base: #F8F9FB;
+    --base-raised: #FFFFFF;
+    --base-elevated: #F1F3F7;
+    --base-border: #E2E4EA;
+    --base-border-strong: #C8CAD4;
+    --ink: #1A1A2E;
+    --ink-muted: #6B6B7B;
+    --ink-faint: #9A9AA5;
+    --accent: #7C6AEF;
+    --accent-soft: #7C6AEF1A;
+    --accent-strong: #9284F5;
+    --accent-foreground: #FFFFFF;
+    --signal-low: #E0685F;
+    --signal-mid: #E0A855;
+    --signal-high: #4FBF8B;
+    --card-shadow: 0 1px 0 0 rgba(0,0,0,0.04) inset, 0 8px 24px -12px rgba(0,0,0,0.08);
+    --scrollbar-thumb: #D0D2DA;
+    --selection-bg: #7c6aef4d;
+  }
+
+  html.dark {
+    --background: #0A0A0C;
+    --foreground: #ECECEF;
+    --card: #131316;
+    --popover: #1B1B20;
+    --primary: #7C6AEF;
+    --primary-foreground: #FFFFFF;
+    --muted: #1B1B20;
+    --muted-foreground: #9A9AA5;
+    --base: #0A0A0C;
+    --base-raised: #131316;
+    --base-elevated: #1B1B20;
+    --base-border: #26262C;
+    --base-border-strong: #34343C;
+    --ink: #ECECEF;
+    --ink-muted: #9A9AA5;
+    --ink-faint: #5E5E68;
+    --accent: #7C6AEF;
+    --accent-soft: #7C6AEF1A;
+    --accent-strong: #9284F5;
+    --accent-foreground: #FFFFFF;
+    --signal-low: #E0685F;
+    --signal-mid: #E0A855;
+    --signal-high: #4FBF8B;
+    --card-shadow: 0 1px 0 0 rgba(255,255,255,0.03) inset, 0 8px 24px -12px rgba(0,0,0,0.5);
+    --scrollbar-thumb: #26262c;
+    --selection-bg: #7c6aef4d;
+  }
+
   html {
     color-scheme: dark;
   }
+
+  html:not(.dark) {
+    color-scheme: light;
+  }
+
   body {
     @apply bg-base text-ink antialiased;
+    background-image:
+      radial-gradient(circle at 80% -10%, rgba(124, 106, 239, 0.12), transparent 28rem),
+      radial-gradient(circle at 0% 100%, rgba(79, 191, 139, 0.05), transparent 24rem);
+    background-attachment: fixed;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
-  ::selection {
-    background: #7c6aef4d;
+
+  html:not(.dark) body {
+    background-image:
+      radial-gradient(circle at 80% -10%, rgba(124, 106, 239, 0.08), transparent 28rem),
+      radial-gradient(circle at 0% 100%, rgba(79, 191, 139, 0.04), transparent 24rem);
   }
-  /* visible keyboard focus everywhere */
+
+  ::selection {
+    background: var(--selection-bg);
+  }
+
   :focus-visible {
     outline: 2px solid #7c6aef;
     outline-offset: 2px;
     border-radius: 6px;
   }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.001ms !important;
       transition-duration: 0.001ms !important;
     }
   }
+}
+
+@layer components {
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-5 py-7 sm:px-8 sm:py-8;
+  }
+
+  .page-hero {
+    @apply relative overflow-hidden rounded-2xl border border-base-border bg-base-raised/80 p-6 shadow-card sm:p-8;
+  }
+
+  .section-kicker {
+    @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-accent;
+  }
+}
+
+html.dim body {
+  background-image: none;
+}
+
+html:not(.dark) .dark\:invert {
+  filter: invert(0);
+}
+
+html:not(.dark) .dark\:hue-rotate-180 {
+  filter: hue-rotate(0deg);
 }
 
 /* thin, quiet scrollbars — a small detail befitting a tool used every day */
@@ -39,9 +141,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #26262c;
+  background: var(--scrollbar-thumb);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #34343c;
+  background: var(--base-border-strong);
 }

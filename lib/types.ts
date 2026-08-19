@@ -59,78 +59,40 @@ export interface RevisionEntry {
 
 export interface LearningTopic {
   id: string;
-
   technology: string;
-
   topic: string;
-
   subtopic?: string;
-
   status: LearningStatus;
-
   confidence: Confidence;
-
   difficulty: Difficulty;
-
   hoursStudied: number;
-
   lastStudied?: string;
-
   notes?: string;
-
+  image?: string;
   resources: Resource[];
-
   interviewQuestions: string[];
-
-  /**
-   * User selected Need Revision
-   */
   needRevision: boolean;
-
-  /**
-   * Generated revision timeline
-   */
   revisionSchedule: RevisionEntry[];
-
-  /**
-   * Revision analytics
-   */
   revisionStats?: {
     total: number;
-
     completed: number;
-
     lastRevision?: string;
-
     retention: number;
-
     totalReviews?: number;
   };
-
   createdAt: string;
-
   updatedAt: string;
 }
 
 export interface LearningFormValues {
   technology: string;
-
   topic: string;
-
   subtopic?: string;
-
   status: LearningStatus;
-
   confidence: Confidence;
-
   difficulty: Difficulty;
-
   hoursStudied: number;
-
   notes?: string;
-
-  /**
-   * When true automatically create revision plan
-   */
+  image?: string;
   needRevision: boolean;
 }

@@ -22,6 +22,7 @@ import type { LearningTopic, RevisionEntry } from "@/lib/types";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 
 function calculateStreak(topics: LearningTopic[]) {
   const days = new Set<string>();
@@ -69,6 +70,7 @@ const formattedDate = now.toLocaleDateString("en-US", {
 });
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const topics = useLiveQuery(() => db.learningTopics.toArray(), []);
 
   if (!topics) {
@@ -210,7 +212,7 @@ tracking-tight
 lg:text-5xl
 "
             >
-              {greeting}, Abhishek 👋
+              {greeting}, {user?.name ?? "Developer"} 👋
             </h1>
 
             <p

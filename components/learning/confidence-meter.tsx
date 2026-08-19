@@ -4,7 +4,7 @@ import type { Confidence } from "@/lib/types";
 const HEIGHTS = ["h-1.5", "h-2.5", "h-3.5", "h-4.5", "h-5.5"];
 
 function tone(level: Confidence) {
-  if (level <= 2) return "bg-signal-low";
+  if (typeof level === "number" && level <= 2) return "bg-signal-low";
   if (level === 3) return "bg-signal-mid";
   return "bg-signal-high";
 }
@@ -15,6 +15,7 @@ function tone(level: Confidence) {
  * ring or a percentage, since confidence here is a felt, discrete rating.
  */
 export function ConfidenceMeter({ level, className }: { level: Confidence; className?: string }) {
+  const numericLevel = typeof level === "number" ? level : 0;
   return (
     <div className={cn("flex items-end gap-[3px]", className)} title={`Confidence ${level}/5`}>
       {HEIGHTS.map((h, i) => (
@@ -23,7 +24,7 @@ export function ConfidenceMeter({ level, className }: { level: Confidence; class
           className={cn(
             "w-[3.5px] rounded-sm",
             h,
-            i < level ? tone(level) : "bg-base-border"
+            i < numericLevel ? tone(level) : "bg-base-border"
           )}
         />
       ))}

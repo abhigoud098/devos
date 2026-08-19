@@ -33,13 +33,11 @@ const DEFAULTS: LearningFormSchema = {
   topic: "",
   subtopic: "",
   status: "not-started",
-
   confidence: 3,
-
   difficulty: "medium",
-
   hoursStudied: 0,
   notes: "",
+  image: "",
   needRevision: false,
 };
 
@@ -56,6 +54,8 @@ export function LearningFormDialog() {
     handleSubmit,
     control,
     reset,
+    watch,
+    setValue,
     formState: { isSubmitting },
   } = useForm<LearningFormSchema>({
     resolver: zodResolver(learningFormSchema),
@@ -63,24 +63,59 @@ export function LearningFormDialog() {
     defaultValues: DEFAULTS,
   });
 
+  const formValues = watch();
+
   useEffect(() => {
     if (!dialogOpen) return;
 
-    reset(
-      editingTopic
-        ? {
+    if (editingTopic) {
+      reset({
+        ...DEFAULTS,
+        ...editingTopic,
+      });
+    } else {
+      const savedDraft = localStorage.getItem("learning-topic-draft");
+      if (savedDraft) {
+        try {
+          reset({
             ...DEFAULTS,
-            ...editingTopic,
-          }
-        : DEFAULTS,
-    );
+            ...JSON.parse(savedDraft),
+          });
+        } catch (e) {
+          reset(DEFAULTS);
+        }
+      } else {
+        reset(DEFAULTS);
+      }
+    }
   }, [dialogOpen, editingTopic, reset]);
+
+  useEffect(() => {
+    if (dialogOpen && !editingId) {
+      localStorage.setItem("learning-topic-draft", JSON.stringify(formValues));
+    }
+  }, [formValues, dialogOpen, editingId]);
+
+  function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert("Image size must be less than 1MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setValue("image", reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }
 
   async function onSubmit(values: LearningFormSchema) {
     if (editingId) {
       await updateTopic(editingId, values);
     } else {
       await createTopic(values);
+      localStorage.removeItem("learning-topic-draft");
     }
 
     reset(DEFAULTS);
@@ -205,6 +240,24 @@ export function LearningFormDialog() {
             <Label>Notes</Label>
 
             <Textarea rows={4} {...register("notes")} />
+          </div>
+
+          <div>
+            <Label>Image</Label>
+
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={handleImage}
+              className="mt-2"
+            />
+
+            {formValues.image && (
+              <img
+                src={formValues.image}
+                className="rounded-lg mt-2 h-32 w-full object-cover"
+              />
+            )}
           </div>
 
           {/* REVISION OPTION */}
