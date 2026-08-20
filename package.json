@@ -5,7 +5,8 @@
   "description": "DevOS — your personal offline developer second brain.",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "@types/node": "20.14.13",
+    "@types/pg": "^8.11.10",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
     "autoprefixer": "10.4.19",
