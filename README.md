@@ -677,7 +677,7 @@ The production environment should use a hosted PostgreSQL database.
 Do not use:
 
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/devos"
+DATABASE_URL="postgresql://postgres:mongoose@localhost:5432/devos"
 ```
 
 for Vercel production.

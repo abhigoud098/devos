@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 generator client {
@@ -42,8 +42,8 @@ model LearningTopic {
   scheduledDate      String? // YYYY-MM-DD
   scheduledTime      String? // HH:mm
   scheduledAt        DateTime?
-  notes              String?   @db.Text
-  image              String?   @db.Text
+  notes              String?
+  image              String?
   needRevision       Boolean   @default(false)
   resources          Json?     @default("[]")
   interviewQuestions Json?     @default("[]")
@@ -69,7 +69,7 @@ model RevisionEntry {
   doneAt      DateTime?
   reviewCount Int       @default(0)
   source      String    @default("system")
-  notes       String?   @db.Text
+  notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -84,9 +84,9 @@ model Note {
   id        String   @id @default(uuid())
   userId    String
   title     String
-  content   String   @db.Text
+  content   String
   type      String   @default("General")
-  image     String?  @db.Text
+  image     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -100,12 +100,12 @@ model Project {
   id          String   @id @default(uuid())
   userId      String
   title       String
-  description String   @db.Text
+  description String
   tech        String
   github      String   @default("")
   live        String   @default("")
   status      String   @default("Idea") // "Idea" | "Building" | "Completed"
-  image       String?  @db.Text
+  image       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -120,9 +120,9 @@ model ResourceItem {
   userId      String
   title       String
   url         String
-  description String   @db.Text
+  description String
   type        String   @default("Article") // "Youtube" | "Github" | "Article" | "Course" | "PDF"
-  image       String?  @db.Text
+  image       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -136,11 +136,11 @@ model PlannerTask {
   id          String   @id @default(uuid())
   userId      String
   title       String
-  description String   @db.Text
+  description String
   date        String // YYYY-MM-DD
   hours       String   @default("1")
   status      String   @default("Pending") // "Pending" | "Completed"
-  image       String?  @db.Text
+  image       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -160,14 +160,14 @@ model DSAProblem {
   method           String   @default("Two Pointer")
   difficulty       String   @default("Medium") // "Easy" | "Medium" | "Hard"
   status           String   @default("Solved") // "Solved" | "Revising" | "Mastered" | "Stuck"
-  struggle         String   @default("") @db.Text
-  learning         String   @default("") @db.Text
+  struggle         String   @default("")
+  learning         String   @default("")
   revisionEnabled  Boolean  @default(false)
   revisionDate     String?
   revisionInterval String?
-  revisionNotes    String?  @db.Text
+  revisionNotes    String?
   revisionDone     Boolean  @default(false)
-  image            String?  @db.Text
+  image            String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

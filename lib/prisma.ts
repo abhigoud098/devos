@@ -1,38 +1,31 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import path from "path";
 
 declare global {
   // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
-  // eslint-disable-next-line no-var
-  var pgPool: Pool | undefined;
 }
 
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgresql://postgres:postgres@localhost:5432/devos?schema=public";
+const dbUrl = process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith("file:")
+  ? process.env.DATABASE_URL
+  : "file:./dev.db";
 
-const pool =
-  global.pgPool ||
-  new Pool({
-    connectionString,
-    max: 10,
-    idleTimeoutMillis: 30000,
-  });
+function createPrismaClient(): PrismaClient {
+  const filePath = dbUrl.replace(/^file:/, "");
+  const absolutePath = path.isAbsolute(filePath)
+    ? filePath
+    : path.join(process.cwd(), filePath);
 
-if (process.env.NODE_ENV !== "production") {
-  global.pgPool = pool;
-}
+  const adapter = new PrismaBetterSqlite3({ url: absolutePath });
 
-const adapter = new PrismaPg(pool);
-
-export const prisma =
-  global.prisma ||
-  new PrismaClient({
+  return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
+}
+
+export const prisma = global.prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   global.prisma = prisma;
