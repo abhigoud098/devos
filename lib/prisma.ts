@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
@@ -11,7 +12,8 @@ declare global {
 
 const connectionString =
   process.env.DATABASE_URL ||
-  "postgresql://postgres:postgres@localhost:5432/devos?schema=public";
+  process.env.DIRECT_URL ||
+  "";
 
 function createPool(): Pool {
   const isLocal =

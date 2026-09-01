@@ -137,6 +137,7 @@ export default function StudyTimerPage() {
     completionInProgress.current = true;
     completeSession();
     setTime(minutes * 60);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, time, minutes]);
 
   async function completeSession() {

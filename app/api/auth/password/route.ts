@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth-server";
 
+export const dynamic = "force-dynamic";
+
 export async function PUT(req: Request) {
   try {
     const user = await getAuthUser(req);

@@ -1,13 +1,22 @@
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { format, addDays } from "date-fns";
 
 const connectionString =
+  process.env.DIRECT_URL ||
   process.env.DATABASE_URL ||
-  "postgresql://postgres:postgres@localhost:5432/devos?schema=public";
+  "";
 
-const pool = new Pool({ connectionString });
+const isLocal =
+  connectionString.includes("localhost") ||
+  connectionString.includes("127.0.0.1");
+
+const pool = new Pool({
+  connectionString,
+  ssl: isLocal ? false : { rejectUnauthorized: false },
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 

@@ -12,8 +12,11 @@ export const metadata: Metadata = {
   description: "Your personal, offline command center for becoming a better software engineer.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    shortcut: "/icon.svg",
     apple: "/icon.png",
   },
 };

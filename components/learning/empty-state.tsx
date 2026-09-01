@@ -9,7 +9,7 @@ export function LearningEmptyState({ onCreate }: { onCreate: () => void }) {
       </div>
       <p className="text-[14px] text-ink mb-1">No topics logged yet</p>
       <p className="text-[13px] text-ink-muted max-w-xs mb-5">
-        Add the first technology or topic you're studying — DevOS will track your confidence,
+        Add the first technology or topic you&apos;re studying — DevOS will track your confidence,
         hours, and revisions from here.
       </p>
       <Button size="sm" onClick={onCreate}>

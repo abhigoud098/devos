@@ -29,34 +29,41 @@ export async function getAuthUser(req: Request): Promise<ServerUser | null> {
       }
     }
 
-    if (userId) {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, name: true, email: true },
-      });
-
-      if (user) {
-        return user;
+    if (!userId) {
+      const cookieHeader = req.headers.get("cookie");
+      if (cookieHeader) {
+        const cookies = Object.fromEntries(
+          cookieHeader.split(";").map((c) => {
+            const [k, ...v] = c.trim().split("=");
+            return [k, decodeURIComponent(v.join("="))];
+          }),
+        );
+        if (cookies.auth_token) {
+          const raw = cookies.auth_token.trim();
+          userId = raw.includes(".") ? raw.split(".")[0] : raw;
+        } else if (cookies.auth_user) {
+          try {
+            const parsed = JSON.parse(cookies.auth_user);
+            if (parsed.id) userId = parsed.id;
+          } catch {}
+        }
       }
     }
 
-    // If no userId header or user not found, find or create default demo user
-    let defaultUser = await prisma.user.findFirst({
+    if (!userId) {
+      return null;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
       select: { id: true, name: true, email: true },
     });
 
-    if (!defaultUser) {
-      defaultUser = await prisma.user.create({
-        data: {
-          name: "Developer",
-          email: "developer@devos.dev",
-          password: "password123",
-        },
-        select: { id: true, name: true, email: true },
-      });
+    if (user) {
+      return user;
     }
 
-    return defaultUser;
+    return null;
   } catch (error) {
     console.error("Auth verification error:", error);
     return null;

@@ -385,6 +385,7 @@ export default function NotesPage() {
                   </div>
 
                   {note.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={note.image}
                       alt="Note visual"

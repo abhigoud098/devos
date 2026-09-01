@@ -175,7 +175,7 @@ export default function NotificationsPage() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
-              Never miss a scheduled topic or spaced repetition cycle. Every day's
+              Never miss a scheduled topic or spaced repetition cycle. Every day&apos;s
               learning tasks are organized line-by-line. Click any notification to jump
               straight to that topic.
             </p>
@@ -217,7 +217,7 @@ export default function NotificationsPage() {
               </Button>
             ) : (
               <p className="mt-1 text-xs text-ink-faint">
-                You'll receive alert reminders when opening the app.
+                You&apos;ll receive alert reminders when opening the app.
               </p>
             )}
           </div>

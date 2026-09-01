@@ -46,6 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const u = { id: res.data.user.id, name: res.data.user.name, email: res.data.user.email };
           setUser(u);
           saveSession(u, true);
+        } else if (res.status === 401) {
+          clearSession();
+          setUser(null);
         }
       });
     }
@@ -74,28 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { success: true };
         }
 
-        // If backend returned error, check fallback or return error
-        if (res.error) {
-          // Local fallback for offline mode
-          const users = getUsers();
-          if (users.some((existing) => existing.email === cleanEmail)) {
-            return { success: false, error: res.error || "An account with this email already exists." };
-          }
-          const newUser: StoredUser = {
-            id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
-            name: cleanName,
-            email: cleanEmail,
-            password,
-            createdAt: new Date().toISOString(),
-          };
-          saveUsers([...users, newUser]);
-          const sessionUser = publicUser(newUser);
-          saveSession(sessionUser, true);
-          setUser(sessionUser);
-          return { success: true };
-        }
-
-        return { success: false, error: res.error || "Failed to sign up" };
+        return { success: false, error: res.error || "Failed to create account." };
       },
       async login(email, password, rememberMe) {
         const cleanEmail = normalizeEmail(email);
@@ -109,17 +91,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: res.data.user.name,
             email: res.data.user.email,
           };
-          saveSession(sessionUser, rememberMe);
-          setUser(sessionUser);
-          return { success: true };
-        }
-
-        // Local fallback if server unreachable
-        const account = getUsers().find(
-          (existing) => existing.email === cleanEmail && existing.password === password,
-        );
-        if (account) {
-          const sessionUser = publicUser(account);
           saveSession(sessionUser, rememberMe);
           setUser(sessionUser);
           return { success: true };
@@ -149,15 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { success: true };
         }
 
-        const users = getUsers();
-        const updatedUsers = users.map((existing) =>
-          existing.id === user.id ? { ...existing, name: cleanName, email: cleanEmail } : existing,
-        );
-        const updatedUser = { ...user, name: cleanName, email: cleanEmail };
-        saveUsers(updatedUsers);
-        saveSession(updatedUser, true);
-        setUser(updatedUser);
-        return { success: true };
+        return { success: false, error: res.error || "Failed to update profile." };
       },
       async changePassword(currentPassword, newPassword) {
         if (!user) return { success: false, error: "You need to sign in again." };
@@ -165,16 +128,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await api.auth.changePassword(currentPassword, newPassword);
 
         if (res.data?.success) {
-          return { success: true };
-        }
-
-        const account = getUsers().find((existing) => existing.id === user.id);
-        if (account && account.password === currentPassword) {
-          saveUsers(
-            getUsers().map((existing) =>
-              existing.id === user.id ? { ...existing, password: newPassword } : existing,
-            ),
-          );
           return { success: true };
         }
 

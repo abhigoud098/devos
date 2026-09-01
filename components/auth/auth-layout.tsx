@@ -15,8 +15,10 @@ export function AuthLayout({
       <div aria-hidden className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-accent/15 blur-3xl" />
       <div aria-hidden className="absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
       <section className="relative w-full max-w-md animate-slide-up rounded-2xl border border-base-border bg-base-raised/95 p-6 shadow-card sm:p-8">
-        <Link href="/" className="mb-9 inline-flex items-center gap-2.5 text-lg font-semibold text-ink transition-opacity hover:opacity-80">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent text-white shadow-lg shadow-accent/25"><Code2 className="h-5 w-5" /></span>
+        <Link href="/" className="mb-9 inline-flex items-center gap-2.5 text-lg font-bold text-ink transition-opacity hover:opacity-80">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-500 font-mono font-bold text-base text-white shadow-lg shadow-violet-500/25">
+            {"</>"}
+          </span>
           <span>DevOS</span>
         </Link>
         <div className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-base-border bg-base-elevated px-2.5 py-1 text-[11px] font-medium text-ink-muted"><ShieldCheck className="h-3.5 w-3.5 text-signal-high" /> Local-first and private</div>

@@ -746,6 +746,7 @@ export default function DSAPage() {
                     )}
 
                     {problem.image && (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={problem.image}
                         alt="Problem visual"

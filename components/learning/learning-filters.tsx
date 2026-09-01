@@ -27,7 +27,7 @@ export function LearningFilters() {
 
   return (
     <div className="flex flex-wrap items-center gap-2.5">
-      <div className="relative flex-1 min-w-[200px]">
+      <div className="relative flex-1 min-w-[180px] w-full sm:w-auto">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-faint" />
         <Input
           placeholder="Search technology, topic, subtopic…"
@@ -38,7 +38,7 @@ export function LearningFilters() {
       </div>
 
       <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-full sm:w-40 flex-1 sm:flex-initial">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -51,7 +51,7 @@ export function LearningFilters() {
       </Select>
 
       <Select value={technologyFilter} onValueChange={setTechnologyFilter}>
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-full sm:w-44 flex-1 sm:flex-initial">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -64,7 +64,7 @@ export function LearningFilters() {
         </SelectContent>
       </Select>
 
-      <Button onClick={openCreateDialog} className="ml-auto">
+      <Button onClick={openCreateDialog} className="w-full sm:w-auto sm:ml-auto">
         <Plus className="h-4 w-4" />
         Add topic
       </Button>

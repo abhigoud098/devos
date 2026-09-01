@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Search, UserRound, Sparkles } from "lucide-react";
+import { Bell, Search, UserRound, Sparkles, Menu } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
@@ -10,6 +10,7 @@ import { getTopicNotifications } from "@/lib/notifications";
 
 const routeTitles: Record<string, { title: string; category: string }> = {
   "/": { title: "Dashboard", category: "Overview" },
+  "/ai": { title: "AI Assistant", category: "Overview" },
   "/notifications": { title: "Notifications", category: "Insights" },
   "/learning": { title: "Learning Hub", category: "Learning" },
   "/revision": { title: "Smart Revision", category: "Learning" },
@@ -24,7 +25,11 @@ const routeTitles: Record<string, { title: string; category: string }> = {
   "/settings": { title: "Settings", category: "Account" },
 };
 
-export function TopHeader() {
+interface TopHeaderProps {
+  onOpenMenu?: () => void;
+}
+
+export function TopHeader({ onOpenMenu }: TopHeaderProps) {
   const pathname = usePathname();
   const { user } = useAuth();
 
@@ -37,15 +42,26 @@ export function TopHeader() {
   const current = routeTitles[pathname] || { title: "DevOS", category: "Workspace" };
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-base-border/70 bg-card/80 px-4 sm:px-8 backdrop-blur-md">
-      {/* LEFT: Context Breadcrumb / Mobile Logo */}
-      <div className="flex items-center gap-3">
-        <Link href="/" className="flex items-center gap-2 md:hidden">
-          <img
-            src="/logo.png"
-            alt="DevOS"
-            className="h-6 w-auto object-contain dark:invert dark:hue-rotate-180"
-          />
+    <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-base-border/70 bg-card/80 px-3.5 sm:px-6 lg:px-8 backdrop-blur-md">
+      {/* LEFT: Mobile Hamburger + Context Breadcrumb / Mobile Logo */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Mobile Hamburger Trigger */}
+        {onOpenMenu && (
+          <button
+            type="button"
+            onClick={onOpenMenu}
+            className="flex lg:hidden h-8 w-8 items-center justify-center rounded-lg border border-base-border/80 bg-base-raised/60 text-ink-muted hover:bg-base-elevated hover:text-ink transition-colors"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+        )}
+
+        <Link href="/" className="flex items-center gap-2 lg:hidden">
+          <div className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-gradient-to-tr from-violet-600 to-indigo-500 font-mono font-bold text-xs text-white shadow-sm shadow-violet-500/20">
+            {"</>"}
+          </div>
+          <span className="font-bold text-sm tracking-tight text-ink">DevOS</span>
         </Link>
 
         <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-ink-muted">
@@ -80,7 +96,7 @@ export function TopHeader() {
             <UserRound className="h-3 w-3" />
           </div>
           <span className="max-w-[100px] truncate font-medium sm:max-w-[140px]">
-            {user?.name || "Developer"}
+            {user?.name || "User"}
           </span>
         </Link>
       </div>

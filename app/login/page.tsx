@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState, Suspense } from "react";
+
+export const dynamic = "force-dynamic";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
@@ -42,9 +44,15 @@ function LoginContent() {
       <label className="block space-y-2 text-sm font-medium text-ink"><span>Email address</span>
         <Input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" className="h-11" />
       </label>
-      <label className="block space-y-2 text-sm font-medium text-ink"><span>Password</span>
+      <div className="space-y-2 text-sm font-medium text-ink">
+        <div className="flex items-center justify-between">
+          <span>Password</span>
+          <Link href="/forgot-password" className="text-xs font-normal text-accent hover:underline">
+            Forgot password?
+          </Link>
+        </div>
         <PasswordInput value={password} onChange={setPassword} autoComplete="current-password" />
-      </label>
+      </div>
       <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-muted"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="h-4 w-4 rounded border-base-border accent-accent" /> <span>Remember me on this device</span></label>
       <Button type="submit" disabled={submitting} className="h-11 w-full shadow-lg shadow-accent/20">{submitting ? "Signing in…" : "Sign in to DevOS"}</Button>
     </form>

@@ -41,8 +41,8 @@ export function StatCard({
         </div>
 
         <div className="mt-3">
-          <p className="text-xs font-medium text-ink-muted">{title}</p>
-          <p className="mt-1 text-2xl font-bold tracking-tight text-ink">{value}</p>
+          <p className="text-xs font-medium text-ink-muted truncate">{title}</p>
+          <p className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-ink">{value}</p>
           {(description || trend) && (
             <p className="mt-1 text-[11px] text-ink-faint">
               {trend && <span className="text-signal-high font-medium mr-1">{trend}</span>}

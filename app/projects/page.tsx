@@ -409,6 +409,7 @@ export default function ProjectsPage() {
                           </div>
 
                           {project.image && (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={project.image}
                               alt="Project thumbnail"

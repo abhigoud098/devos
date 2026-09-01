@@ -57,16 +57,38 @@ export const api = {
     async me() {
       return request<{ user: any }>("/api/auth/me");
     },
-    async updateProfile(name: string, email: string) {
-      return request<{ success: boolean; user: any }>("/api/auth/profile", {
+    async getProfile() {
+      return request<{ user: any; preferences: any }>("/api/auth/profile");
+    },
+    async updateProfile(dataOrName: any, email?: string) {
+      const payload = typeof dataOrName === "object" ? dataOrName : { name: dataOrName, email };
+      return request<{ success: boolean; user: any; preferences?: any; message?: string }>("/api/auth/profile", {
         method: "PUT",
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify(payload),
+      });
+    },
+    async deleteAccount(password: string) {
+      return request<{ success: boolean; message?: string }>("/api/auth/profile", {
+        method: "DELETE",
+        body: JSON.stringify({ password }),
       });
     },
     async changePassword(currentPassword: string, newPassword: string) {
       return request<{ success: boolean }>("/api/auth/password", {
         method: "PUT",
         body: JSON.stringify({ currentPassword, newPassword }),
+      });
+    },
+    async forgotPassword(email: string) {
+      return request<{ success: boolean; message: string }>("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+    },
+    async resetPassword(token: string, password: string) {
+      return request<{ success: boolean; message: string }>("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, password }),
       });
     },
   },
@@ -101,6 +123,14 @@ export const api = {
         method: "PUT",
         body: JSON.stringify({ revisionDate, done: true, notes }),
       });
+    },
+    async sendTodayEmail() {
+      return request<{ success: boolean; count: number; email: string; message: string }>(
+        "/api/learning/email-today",
+        {
+          method: "POST",
+        },
+      );
     },
   },
 
@@ -313,6 +343,41 @@ export const api = {
       return request<{ success: boolean; message: string }>("/api/sync", {
         method: "POST",
         body: JSON.stringify(data),
+      });
+    },
+  },
+
+  // Settings & Email Notifications
+  settings: {
+    async getEmailSettings() {
+      return request<{ email: string; enabled: boolean; reminderMinutes: number }>(
+        "/api/settings/email",
+      );
+    },
+    async updateEmailSettings(data: {
+      email?: string;
+      enabled?: boolean;
+      reminderMinutes?: number;
+    }) {
+      return request<{
+        success: boolean;
+        email: string;
+        enabled: boolean;
+        reminderMinutes: number;
+        message: string;
+      }>("/api/settings/email", {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      });
+    },
+  },
+
+  // AI Assistant
+  ai: {
+    async chat(message: string, history: Array<{ role: string; content: string }> = []) {
+      return request<{ response: string; intent: string }>("/api/ai/chat", {
+        method: "POST",
+        body: JSON.stringify({ message, history }),
       });
     },
   },

@@ -2,6 +2,7 @@ import { db } from "./db";
 import { buildRevisionSchedule } from "./revision";
 import type { LearningFormValues, LearningTopic } from "./types";
 import { api } from "./api-client";
+import { getSession } from "./auth-storage";
 
 function nowISO() {
   return new Date().toISOString();
@@ -12,6 +13,9 @@ function nowISO() {
  */
 export async function syncTopicsFromBackend() {
   try {
+    const session = getSession();
+    if (!session?.id) return;
+
     const res = await api.learning.list();
     if (res.data?.topics && Array.isArray(res.data.topics)) {
       const formatted: LearningTopic[] = res.data.topics.map((t: any) => {

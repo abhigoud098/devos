@@ -20,6 +20,7 @@ import {
   UserRound,
   Settings,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -30,12 +31,14 @@ import { getTopicNotifications } from "@/lib/notifications";
 const primaryMobileTabs = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/learning", label: "Learning", icon: BookOpen },
+  { href: "/ai", label: "AI", icon: Sparkles },
   { href: "/notifications", label: "Alerts", icon: Bell, hasBadge: true },
   { href: "/revision", label: "Revision", icon: Brain },
 ];
 
 const allNavLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, section: "Overview" },
+  { href: "/ai", label: "AI Assistant", icon: Sparkles, section: "Overview" },
   { href: "/notifications", label: "Notifications", icon: Bell, section: "Overview", hasBadge: true },
   { href: "/learning", label: "Learning Hub", icon: BookOpen, section: "Learning" },
   { href: "/revision", label: "Smart Revision", icon: Brain, section: "Learning" },
@@ -48,11 +51,15 @@ const allNavLinks = [
   { href: "/analytics", label: "Analytics", icon: BarChart3, section: "Productivity" },
 ];
 
-export function MobileNav() {
+interface MobileNavProps {
+  onOpenMenu?: () => void;
+}
+
+export function MobileNav({ onOpenMenu }: MobileNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [internalDrawerOpen, setInternalDrawerOpen] = useState(false);
 
   const dueCount = useLiveQuery(async () => {
     const list = await db.learningTopics.toArray();
@@ -61,29 +68,36 @@ export function MobileNav() {
   }, []);
 
   function handleLogout() {
-    setDrawerOpen(false);
+    setInternalDrawerOpen(false);
     logout();
     router.replace("/login");
   }
 
+  function handleMoreClick() {
+    if (onOpenMenu) {
+      onOpenMenu();
+    } else {
+      setInternalDrawerOpen(true);
+    }
+  }
+
   return (
     <>
-      {/* FULL-SCREEN MOBILE DRAWER */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-xl md:hidden animate-fade-in">
+      {/* FALLBACK FULL-SCREEN MOBILE DRAWER IF NO ONOPENMENU */}
+      {internalDrawerOpen && !onOpenMenu && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-xl lg:hidden animate-fade-in">
           {/* Drawer Header */}
           <div className="flex h-14 items-center justify-between border-b border-base-border px-5">
-            <div className="flex items-center gap-2">
-              <img
-                src="/logo.png"
-                alt="DevOS"
-                className="h-6 w-auto object-contain dark:invert dark:hue-rotate-180"
-              />
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-gradient-to-tr from-violet-600 to-indigo-500 font-mono font-bold text-xs text-white shadow-sm shadow-violet-500/20">
+                {"</>"}
+              </div>
               <span className="text-xs font-bold text-ink">DevOS Menu</span>
             </div>
             <button
-              onClick={() => setDrawerOpen(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-base-border text-ink-muted"
+              onClick={() => setInternalDrawerOpen(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-base-border text-ink-muted hover:text-ink"
+              aria-label="Close navigation menu"
             >
               <X className="h-4 w-4" />
             </button>
@@ -101,7 +115,7 @@ export function MobileNav() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setDrawerOpen(false)}
+                    onClick={() => setInternalDrawerOpen(false)}
                     className={cn(
                       "flex items-center justify-between rounded-xl p-3 text-xs font-medium border transition-colors",
                       active
@@ -133,7 +147,7 @@ export function MobileNav() {
               <div className="grid grid-cols-2 gap-2">
                 <Link
                   href="/profile"
-                  onClick={() => setDrawerOpen(false)}
+                  onClick={() => setInternalDrawerOpen(false)}
                   className="flex items-center justify-center gap-1.5 rounded-xl border border-base-border bg-base-raised/60 py-2.5 text-xs font-medium text-ink"
                 >
                   <UserRound className="h-3.5 w-3.5" />
@@ -141,7 +155,7 @@ export function MobileNav() {
                 </Link>
                 <Link
                   href="/settings"
-                  onClick={() => setDrawerOpen(false)}
+                  onClick={() => setInternalDrawerOpen(false)}
                   className="flex items-center justify-center gap-1.5 rounded-xl border border-base-border bg-base-raised/60 py-2.5 text-xs font-medium text-ink"
                 >
                   <Settings className="h-3.5 w-3.5" />
@@ -161,8 +175,8 @@ export function MobileNav() {
         </div>
       )}
 
-      {/* BOTTOM TAB BAR */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around border-t border-base-border/80 bg-card/90 px-2 backdrop-blur-lg md:hidden">
+      {/* BOTTOM TAB BAR (Mobile < 1024px) */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around border-t border-base-border/80 bg-card/90 px-2 backdrop-blur-lg lg:hidden">
         {primaryMobileTabs.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
@@ -192,11 +206,9 @@ export function MobileNav() {
 
         {/* Menu Drawer Button */}
         <button
-          onClick={() => setDrawerOpen(true)}
-          className={cn(
-            "flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[11px] font-medium transition-colors",
-            drawerOpen ? "text-accent font-semibold" : "text-ink-muted hover:text-ink",
-          )}
+          onClick={handleMoreClick}
+          className="flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[11px] font-medium text-ink-muted hover:text-ink transition-colors"
+          aria-label="Open navigation drawer"
         >
           <Menu className="h-5 w-5" strokeWidth={1.8} />
           <span>More</span>
