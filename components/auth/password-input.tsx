@@ -23,8 +23,14 @@ export function PasswordInput({ value, onChange, placeholder = "Enter your passw
         autoComplete={autoComplete}
         className="h-11 pr-11"
       />
-      <button type="button" onClick={() => setVisible(!visible)} aria-label={visible ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 grid w-11 place-items-center text-ink-faint hover:text-ink">
-        {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      <button
+        type="button"
+        onClick={() => setVisible(!visible)}
+        aria-label={visible ? "Hide password" : "Show password"}
+        title={visible ? "Hide password" : "Show password"}
+        className="absolute inset-y-0 right-0 grid w-11 place-items-center text-ink-faint hover:text-ink transition-colors"
+      >
+        {visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
       </button>
     </div>
   );

@@ -4,10 +4,9 @@
   "private": true,
   "description": "DevOS — your personal offline developer second brain.",
   "scripts": {
-    "prebuild": "if not exist .next mkdir .next && attrib +P .next /s /d 2>nul || exit 0",
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && node scripts/patch-next.js",
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
