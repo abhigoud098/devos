@@ -1,10 +1,6 @@
 # 🧠 DevOS — Developer Second Brain
 
 <p align="center">
-  <img src="./public/globe.svg" alt="DevOS Logo" width="80" height="80" />
-</p>
-
-<p align="center">
   <strong>Your personal, offline-first developer productivity and learning workspace.</strong><br />
   Learn • Build • Revise • Solve DSA • Track • Optimize with AI
 </p>
