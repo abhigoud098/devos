@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🧠 DevOS — Developer Second Brain
 
 <p align="center">
