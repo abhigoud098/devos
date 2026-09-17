@@ -24,6 +24,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   X,
+  RotateCcw,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,10 @@ export default function AIAssistantPage() {
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  // Message edit state
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -330,6 +335,161 @@ export default function AIAssistantPage() {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  function handleStartEdit(message: Message) {
+    if (loading) return;
+    setEditingMessageId(message.id);
+    setEditingContent(message.content);
+  }
+
+  function handleCancelEdit() {
+    setEditingMessageId(null);
+    setEditingContent("");
+  }
+
+  async function handleSaveEdit(messageId: string) {
+    const trimmed = editingContent.trim();
+    if (!trimmed || loading) return;
+
+    const msgIndex = messages.findIndex((m) => m.id === messageId);
+    if (msgIndex === -1) return;
+
+    const updatedUserMessage: Message = {
+      ...messages[msgIndex],
+      content: trimmed,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    // Keep all conversation turns prior to this message, then add the edited message
+    const priorMessages = messages.slice(0, msgIndex);
+    const newMessages = [...priorMessages, updatedUserMessage];
+    setMessages(newMessages);
+    setEditingMessageId(null);
+    setEditingContent("");
+    setLoading(true);
+
+    const currentId = activeChatId;
+    const updatedList = [...conversations];
+
+    try {
+      const history = priorMessages
+        .filter((m) => m.id !== "welcome")
+        .slice(-8)
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+
+      const res = await api.ai.chat(trimmed, history);
+
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content:
+          res.data?.response ||
+          res.error ||
+          "I'm sorry, I encountered an issue generating a response. Please try again.",
+        intent: res.data?.intent,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+
+      const finalMessages = [...newMessages, assistantMessage];
+      setMessages(finalMessages);
+
+      if (currentId) {
+        const nowIso = new Date().toISOString();
+        const updatedWithResponse = updatedList.map((c) =>
+          c.id === currentId ? { ...c, messages: finalMessages, updatedAt: nowIso } : c,
+        );
+        setConversations(updatedWithResponse);
+        saveConversationsToStorage(updatedWithResponse);
+      }
+    } catch {
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "Network error. Please verify your connection and try again.",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setMessages([...newMessages, errorMessage]);
+    } finally {
+      setLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }
+
+  async function handleRegenerate(assistantMessageId: string) {
+    if (loading) return;
+
+    const astIndex = messages.findIndex((m) => m.id === assistantMessageId);
+    if (astIndex <= 0) return;
+
+    // Find the user prompt preceding this assistant message
+    let userMsgIndex = -1;
+    for (let i = astIndex - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        userMsgIndex = i;
+        break;
+      }
+    }
+    if (userMsgIndex === -1) return;
+
+    const userPrompt = messages[userMsgIndex].content;
+    // Replace everything starting from this assistant message
+    const priorMessages = messages.slice(0, userMsgIndex + 1);
+    setMessages(priorMessages);
+    setLoading(true);
+
+    const currentId = activeChatId;
+    const updatedList = [...conversations];
+
+    try {
+      const history = messages
+        .slice(0, userMsgIndex)
+        .filter((m) => m.id !== "welcome")
+        .slice(-8)
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+
+      const res = await api.ai.chat(userPrompt, history);
+
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content:
+          res.data?.response ||
+          res.error ||
+          "I'm sorry, I encountered an issue generating a response. Please try again.",
+        intent: res.data?.intent,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+
+      const finalMessages = [...priorMessages, assistantMessage];
+      setMessages(finalMessages);
+
+      if (currentId) {
+        const nowIso = new Date().toISOString();
+        const updatedWithResponse = updatedList.map((c) =>
+          c.id === currentId ? { ...c, messages: finalMessages, updatedAt: nowIso } : c,
+        );
+        setConversations(updatedWithResponse);
+        saveConversationsToStorage(updatedWithResponse);
+      }
+    } catch {
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "Network error. Please verify your connection and try again.",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setMessages([...priorMessages, errorMessage]);
+    } finally {
+      setLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
   }
 
   function clearChat() {
@@ -680,43 +840,168 @@ export default function AIAssistantPage() {
           {/* Messages Container */}
           <Card className="flex-1 overflow-hidden border-base-border/80 bg-card flex flex-col min-h-0 shadow-sm">
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-              {messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  {m.role === "assistant" && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent border border-accent/20">
-                      <Bot className="h-4 w-4" />
-                    </div>
-                  )}
+              {messages.map((m) => {
+                const isEditingThis = m.role === "user" && editingMessageId === m.id;
 
+                if (isEditingThis) {
+                  return (
+                    <div key={m.id} className="group flex gap-3 justify-end w-full">
+                      <div className="w-full max-w-[92%] sm:max-w-[80%] rounded-2xl border border-accent/50 bg-card p-3 shadow-lg space-y-2 animate-in fade-in zoom-in-95">
+                        <textarea
+                          value={editingContent}
+                          onChange={(e) => setEditingContent(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSaveEdit(m.id);
+                            }
+                            if (e.key === "Escape") {
+                              handleCancelEdit();
+                            }
+                          }}
+                          rows={Math.min(6, Math.max(2, editingContent.split("\n").length))}
+                          className="w-full resize-none rounded-xl border border-base-border bg-base-subtle/50 p-2.5 text-xs sm:text-sm text-ink focus:border-accent focus:outline-none scrollbar-thin leading-relaxed"
+                          autoFocus
+                        />
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            disabled={loading}
+                            className="px-2.5 py-1 rounded-lg border border-base-border/70 text-ink-muted hover:text-ink hover:bg-base-subtle transition-colors text-[11px] font-medium"
+                          >
+                            Cancel
+                          </button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleSaveEdit(m.id)}
+                            disabled={!editingContent.trim() || loading}
+                            className="h-7 px-3 text-[11px] gap-1 rounded-lg font-medium shadow-sm"
+                          >
+                            {loading ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Send className="h-3 w-3" />
+                            )}
+                            <span>Save & Resend</span>
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ink-muted/15 text-ink border border-base-border">
+                        <UserIcon className="h-4 w-4" />
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
                   <div
-                    className={`max-w-[88%] sm:max-w-[78%] min-w-0 overflow-hidden break-words rounded-2xl p-3 sm:p-4 text-xs sm:text-sm leading-relaxed ${
-                      m.role === "user"
-                        ? "bg-accent text-white shadow-md shadow-accent/10"
-                        : "bg-base-subtle/70 border border-base-border/60 text-ink"
-                    }`}
+                    key={m.id}
+                    className={`group flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
-                    <div className="prose-sm dark:prose-invert">
-                      {renderFormattedContent(m.content, m.id)}
-                    </div>
-                    <div
-                      className={`mt-2 text-[10px] ${
-                        m.role === "user" ? "text-white/70 text-right" : "text-ink-muted"
-                      }`}
-                    >
-                      {m.timestamp}
-                    </div>
-                  </div>
+                    {m.role === "assistant" && (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent border border-accent/20">
+                        <Bot className="h-4 w-4" />
+                      </div>
+                    )}
 
-                  {m.role === "user" && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ink-muted/15 text-ink border border-base-border">
-                      <UserIcon className="h-4 w-4" />
+                    <div className="max-w-[88%] sm:max-w-[78%] min-w-0">
+                      <div
+                        className={`overflow-hidden break-words rounded-2xl p-3 sm:p-4 text-xs sm:text-sm leading-relaxed ${
+                          m.role === "user"
+                            ? "bg-accent text-white shadow-md shadow-accent/10"
+                            : "bg-base-subtle/70 border border-base-border/60 text-ink"
+                        }`}
+                      >
+                        <div className="prose-sm dark:prose-invert">
+                          {renderFormattedContent(m.content, m.id)}
+                        </div>
+                        <div
+                          className={`mt-2 text-[10px] ${
+                            m.role === "user" ? "text-white/70 text-right" : "text-ink-muted"
+                          }`}
+                        >
+                          {m.timestamp}
+                        </div>
+                      </div>
+
+                      {/* Action buttons (Copy, Edit for User; Copy, Regenerate for Assistant) */}
+                      {m.role === "user" ? (
+                        <div className="flex items-center justify-end gap-1 mt-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(m.content, m.id)}
+                            title="Copy message"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-ink-muted hover:text-ink hover:bg-base-subtle/80 transition-colors"
+                          >
+                            {copiedId === m.id ? (
+                              <>
+                                <Check className="h-3 w-3 text-signal-high" />
+                                <span className="text-signal-high font-medium">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(m)}
+                            disabled={loading}
+                            title="Edit message"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-ink-muted hover:text-ink hover:bg-base-subtle/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                            <span>Edit</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-start gap-1 mt-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(m.content, m.id)}
+                            title="Copy response"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-ink-muted hover:text-ink hover:bg-base-subtle/80 transition-colors"
+                          >
+                            {copiedId === m.id ? (
+                              <>
+                                <Check className="h-3 w-3 text-signal-high" />
+                                <span className="text-signal-high font-medium">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                          {m.id !== "welcome" && (
+                            <button
+                              type="button"
+                              onClick={() => handleRegenerate(m.id)}
+                              disabled={loading}
+                              title="Regenerate response"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-ink-muted hover:text-ink hover:bg-base-subtle/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              <span>Regenerate</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {m.role === "user" && (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ink-muted/15 text-ink border border-base-border">
+                        <UserIcon className="h-4 w-4" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {loading && (
                 <div className="flex gap-3 justify-start items-center">

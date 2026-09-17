@@ -56,10 +56,12 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, user }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Signup error:", error);
+    const errorMessage =
+      error?.message || "Failed to create account. Please try again.";
     return NextResponse.json(
-      { error: "Failed to create account. Please check your database connection." },
+      { error: errorMessage },
       { status: 500 },
     );
   }

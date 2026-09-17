@@ -5,6 +5,7 @@ import { generateAIResponse } from "@/lib/ai-service";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  console.log("AI API key configured:", Boolean(process.env.AI_API_KEY));
   try {
     const user = await getAuthUser(req);
     if (!user) {
@@ -41,9 +42,9 @@ export async function POST(req: Request) {
       intent: result.intent,
     });
   } catch (error: any) {
-    console.error("POST /api/ai/chat error:", error);
+    console.error("POST /api/ai/chat exception:", error);
     return NextResponse.json(
-      { error: "AI service is temporarily unavailable. Please try again." },
+      { error: error?.message || "An unexpected error occurred while processing your AI request." },
       { status: 500 },
     );
   }
