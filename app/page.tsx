@@ -421,11 +421,11 @@ export default function DashboardPage() {
             <div className="space-y-1.5 sm:space-y-2 flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="flex h-2 w-2 rounded-full bg-violet-400 animate-pulse" />
-                <h3 className="text-sm sm:text-base font-bold text-ink tracking-tight">
+                <h3 className="text-sm sm:text-base font-bold text-ink dark:text-zinc-100 tracking-tight">
                   AI Study Recommendation
                 </h3>
               </div>
-              <p className="text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-3">
+              <p className="text-xs sm:text-sm text-ink-muted dark:text-zinc-300 leading-relaxed line-clamp-3">
                 {recDescription}
               </p>
             </div>

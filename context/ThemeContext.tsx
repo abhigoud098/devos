@@ -20,18 +20,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem("devos-theme") as Theme | null;
     if (saved === "light" || saved === "dark") {
       setTheme(saved);
+    } else {
+      setTheme("dark");
+      localStorage.setItem("devos-theme", "dark");
     }
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
-    localStorage.setItem("devos-theme", theme);
     const root = document.documentElement;
     if (theme === "dark") {
       root.classList.add("dark");
     } else {
       root.classList.remove("dark");
+    }
+    if (mounted) {
+      localStorage.setItem("devos-theme", theme);
     }
   }, [theme, mounted]);
 

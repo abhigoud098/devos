@@ -939,8 +939,8 @@ export default function ProfilePage() {
             {/* AI Study Recommendations Toggle */}
             <div className="flex items-center justify-between p-3.5 rounded-lg border border-base-border bg-base-raised/40">
               <div className="space-y-0.5">
-                <p className="text-xs font-semibold text-ink">Personalized AI Study Recommendations</p>
-                <p className="text-[11px] text-ink-muted">
+                <p className="text-xs font-semibold text-ink dark:text-zinc-100">Personalized AI Study Recommendations</p>
+                <p className="text-[11px] text-ink-muted dark:text-zinc-300">
                   Allow AI Assistant to analyze your active topics and suggest relevant practice problems.
                 </p>
               </div>
